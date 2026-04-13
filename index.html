@@ -20,6 +20,7 @@
             font-size: 16px; font-weight: bold;
         }
         #hud-level { color: #ffd700; }
+        #hud-best { color: #aaa; font-size: 13px; margin-top: 4px; }
 
         /* Minimap */
         #minimap {
@@ -67,8 +68,16 @@
             100% { transform: translate(0,0); }
         }
 
+        /* Fruit counter pop animation */
+        @keyframes fruitPop {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.35); color: #ffcc00; }
+            100% { transform: scale(1); }
+        }
+        .fruit-pop { animation: fruitPop 0.35s ease-out; }
+
         /* Overlays */
-        #start-overlay, #win-overlay, #level-overlay {
+        #start-overlay, #win-overlay, #level-overlay, #pause-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 200; display: flex; flex-direction: column;
             align-items: center; justify-content: center; cursor: pointer;
@@ -76,6 +85,7 @@
         #start-overlay { background: rgba(0,0,0,0.88); }
         #win-overlay { background: rgba(0,0,0,0.8); display: none; }
         #level-overlay { background: rgba(0,0,0,0.85); display: none; }
+        #pause-overlay { background: rgba(0,0,0,0.75); display: none; cursor: default; z-index: 250; }
         #start-overlay h1 {
             font-size: 72px; font-weight: 900; color: #f90;
             text-shadow: 4px 4px 0 #c60, 8px 8px 0 rgba(0,0,0,0.4);
@@ -88,6 +98,31 @@
         #win-overlay h1 { font-size: 60px; color: #0f0; margin-bottom: 15px; }
         #level-overlay h1 { font-size: 54px; color: #ffd700; margin-bottom: 15px; }
         #level-overlay .overlay-sub { margin-bottom: 20px; }
+
+        /* Star ratings */
+        .star-container { font-size: 48px; margin: 10px 0 20px 0; }
+        .star { color: #333; transition: color 0.3s; }
+        .star.gold { color: #ffd700; }
+        .star.silver { color: #c0c0c0; }
+        .star.bronze { color: #cd7f32; }
+        .star.empty { color: #333; }
+        #win-new-best { color: #ff0; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: none; }
+
+        /* Pause menu */
+        #pause-overlay h1 { font-size: 54px; color: #ffd700; margin-bottom: 25px; text-shadow: 3px 3px 0 rgba(0,0,0,0.5); }
+        .pause-btn {
+            background: rgba(255,153,0,0.8); border: none; color: #fff;
+            font-size: 22px; font-weight: bold; padding: 12px 40px;
+            border-radius: 8px; cursor: pointer; margin: 8px;
+            pointer-events: all;
+        }
+        .pause-btn:hover { background: rgba(255,180,50,0.9); }
+        .pause-slider-container {
+            margin-top: 20px; text-align: center; color: #ccc; font-size: 14px;
+        }
+        .pause-slider-container input[type="range"] {
+            width: 200px; margin-top: 6px; cursor: pointer; pointer-events: all;
+        }
     </style>
 </head>
 <body>
@@ -96,6 +131,7 @@
     <div>
         <div class="hud-box" id="hud-fruits">Wumpa: 0 / 0</div>
         <div class="hud-box" id="hud-level" style="margin-top:6px;">Level 1: Tropical</div>
+        <div id="hud-best" class="hud-box" style="margin-top:4px; display:none;">Best: --</div>
     </div>
     <div class="hud-box" id="hud-time">Time: 0s</div>
 </div>
@@ -113,13 +149,19 @@
     <div class="start-msg">CLICK ANYWHERE TO START</div>
     <div class="controls">
         WASD - Run &nbsp;|&nbsp; MOUSE - Look &nbsp;|&nbsp; SPACE - Jump<br>
-        SHIFT - Sprint &nbsp;|&nbsp; LEFT CLICK - Spin Attack<br>
+        SHIFT - Sprint &nbsp;|&nbsp; LEFT CLICK - Spin Attack &nbsp;|&nbsp; ESC - Pause<br>
         Break crates, dodge enemies, collect all Wumpa Fruit!
     </div>
 </div>
 
 <div id="win-overlay">
     <h1>ISLAND COMPLETE!</h1>
+    <div id="win-new-best">NEW BEST!</div>
+    <div class="star-container" id="win-stars">
+        <span class="star empty">&#9733;</span>
+        <span class="star empty">&#9733;</span>
+        <span class="star empty">&#9733;</span>
+    </div>
     <p class="overlay-sub" id="win-stats"></p>
     <div class="start-msg">CLICK FOR NEXT ISLAND</div>
 </div>
@@ -128,6 +170,16 @@
     <h1 id="level-title">Level 2</h1>
     <div class="overlay-sub" id="level-theme">Volcano Island</div>
     <div class="start-msg">CLICK TO BEGIN</div>
+</div>
+
+<div id="pause-overlay">
+    <h1>PAUSED</h1>
+    <button class="pause-btn" id="pause-resume-btn">Resume</button>
+    <div class="pause-slider-container">
+        Mouse Sensitivity<br>
+        <input type="range" id="sens-slider" min="1" max="10" step="0.5" value="4">
+        <div id="sens-value" style="margin-top:4px;">4.0</div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -143,6 +195,9 @@ const LEVELS = [
     { name: 'Crystal Glacier', sky: 0xa8d8ea, fog: 0xc8e8f8, ground: [0xcce8f0, 0xb0d4e0], sand: 0xe8e8f0, water: 0x4488aa, treeColor: 0x88bbcc, rockColor: 0x99aabb, fruits: 35, enemies: 14, crates: 18 },
     { name: 'Shadow Jungle', sky: 0x2a3a2a, fog: 0x1a2a1a, ground: [0x1a3a1a, 0x143014], sand: 0x4a5a3a, water: 0x0a3a2a, treeColor: 0x0a5a0a, rockColor: 0x3a4a3a, fruits: 40, enemies: 18, crates: 22 },
 ];
+
+// Target times for star ratings (seconds)
+const TARGET_TIMES = [60, 90, 120, 150];
 
 // === RENDERER ===
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -177,6 +232,13 @@ sun.shadow.camera.top = sh; sun.shadow.camera.bottom = -sh;
 sun.shadow.camera.far = 200;
 scene.add(sun);
 
+// Base lighting values (for day/night cycle)
+let baseSunIntensity = 1.2;
+let baseAmbientIntensity = 0.7;
+const baseSunColor = new THREE.Color(0xfff4e0);
+const baseAmbientColor = new THREE.Color(0x88aacc);
+let dayNightTime = 0;
+
 // === GAME STATE ===
 const state = {
     pos: new THREE.Vector3(0, 5, 0),
@@ -195,6 +257,10 @@ const state = {
     invincible: 0,
     totalTime: 0,
     screenShake: 0,
+    paused: false,
+    dying: false,
+    deathTimer: 0,
+    respawnPos: new THREE.Vector3(0, 8, 0),
 };
 
 const GRAVITY = -0.02;
@@ -202,7 +268,7 @@ const JUMP_VEL = 0.32;
 const MOVE_SPEED = 0.09;
 const SPRINT_MULT = 1.8;
 const FRICTION = 0.87;
-const MOUSE_SENS = 0.002;
+let MOUSE_SENS = 0.002;
 const SPIN_DURATION = 25;
 const SPIN_COOLDOWN = 50;
 
@@ -211,6 +277,7 @@ const keys = {};
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+    if (e.code === 'Escape' && state.started && !state.won) togglePause();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 let mouseDX = 0, mouseDY = 0;
@@ -223,6 +290,40 @@ let mouseClicked = false;
 document.addEventListener('mousedown', e => {
     if (e.button === 0 && document.pointerLockElement) mouseClicked = true;
 });
+
+// === PAUSE MENU ===
+function togglePause() {
+    if (state.won || !state.started) return;
+    state.paused = !state.paused;
+    document.getElementById('pause-overlay').style.display = state.paused ? 'flex' : 'none';
+    if (state.paused) {
+        document.exitPointerLock();
+        stopMusic();
+    } else {
+        renderer.domElement.requestPointerLock();
+        startMusic();
+        lastTime = performance.now(); // reset dt so no jump
+    }
+}
+document.getElementById('pause-resume-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePause();
+});
+const sensSlider = document.getElementById('sens-slider');
+const sensValue = document.getElementById('sens-value');
+sensSlider.addEventListener('input', () => {
+    const v = parseFloat(sensSlider.value);
+    MOUSE_SENS = v * 0.0005;
+    sensValue.textContent = v.toFixed(1);
+});
+
+// === LOCALSTORAGE BEST TIMES ===
+function getBestTime(levelIdx) {
+    try { const v = localStorage.getItem('kk_best_' + levelIdx); return v ? parseFloat(v) : null; } catch(e) { return null; }
+}
+function setBestTime(levelIdx, t) {
+    try { localStorage.setItem('kk_best_' + levelIdx, t.toFixed(1)); } catch(e) {}
+}
 
 // === AUDIO ===
 let audioCtx;
@@ -244,6 +345,22 @@ function sfxHit() { snd(100, 0.35, 'sawtooth', 0.18); }
 function sfxBreak() { snd(300, 0.12, 'square', 0.1); snd(150, 0.15, 'noise', 0.08); }
 function sfxEnemy() { snd(150, 0.3, 'sawtooth', 0.12); }
 function sfxWin() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>snd(f,0.25,'sine',0.14),i*140)); }
+function sfxSanta() {
+    // "Ho ho ho" jingle - three descending cheerful notes
+    if (!audioCtx) return;
+    [523, 440, 349].forEach((freq, i) => {
+        setTimeout(() => {
+            snd(freq, 0.3, 'sine', 0.12);
+            snd(freq * 1.5, 0.2, 'triangle', 0.06);
+        }, i * 250);
+    });
+    // Jingle bells sound
+    setTimeout(() => {
+        [880, 880, 880, 880, 880, 1047, 784, 831, 880].forEach((f, i) => {
+            setTimeout(() => snd(f, 0.08, 'sine', 0.05), i * 60);
+        });
+    }, 800);
+}
 
 // Simple background music using oscillators
 let musicPlaying = false;
@@ -282,6 +399,13 @@ const enemies = [];
 const crates = [];
 const particles = [];
 const tikiTorches = [];
+const waterfalls = [];
+const weatherParticles = [];
+const caveEntrances = [];
+let santaNPC = null;
+let santaTimer = 0;
+const sprintTrails = [];
+let blobShadow = null;
 
 function clearScene() {
     sceneObjects.forEach(o => scene.remove(o));
@@ -292,6 +416,14 @@ function clearScene() {
     particles.forEach(p => scene.remove(p));
     particles.length = 0;
     tikiTorches.length = 0;
+    waterfalls.length = 0;
+    weatherParticles.forEach(p => scene.remove(p));
+    weatherParticles.length = 0;
+    caveEntrances.length = 0;
+    sprintTrails.forEach(t => scene.remove(t));
+    sprintTrails.length = 0;
+    if (santaNPC) { scene.remove(santaNPC.group); santaNPC = null; }
+    santaTimer = 0;
     islandMesh = null;
     if (oceanMesh) { scene.remove(oceanMesh); oceanMesh = null; }
 }
@@ -312,6 +444,8 @@ function createIsland(level) {
     scene.fog = new THREE.FogExp2(L.fog, 0.008);
     ambient.color.set(L.sky);
     sun.color.set(level === 1 ? 0xff8844 : level === 2 ? 0xccddff : level === 3 ? 0x88aa88 : 0xfff4e0);
+    baseSunIntensity = level === 3 ? 0.6 : 1.2; // Shadow Jungle starts darker
+    baseAmbientIntensity = level === 3 ? 0.35 : 0.7;
 
     const size = 120;
     const geo = new THREE.PlaneGeometry(size, size, 80, 80);
@@ -323,10 +457,10 @@ function createIsland(level) {
         let h = Math.max(0, 12 - dist * 0.25);
         h += Math.sin(x*0.15) * Math.cos(z*0.12) * 3;
         h += Math.sin(x*0.08+1) * Math.cos(z*0.06+2) * 2;
-        if (level === 1 && dist > 30) h += Math.sin(x*0.3)*Math.cos(z*0.3)*1.5; // extra hills
-        if (level === 1) { if (dist < 8) h = 2 + h * 0.2; }
-        if (level === 2) { h *= 1.3; } // taller volcano terrain
-        if (level === 3) { h *= 0.7; } // flatter glacier
+        if (level === 0 && dist > 30) h += Math.sin(x*0.3)*Math.cos(z*0.3)*1.5; // extra hills
+        if (level === 0) { if (dist < 8) h = 2 + h * 0.2; }
+        if (level === 1) { h *= 1.3; } // taller volcano terrain
+        if (level === 2) { h *= 0.7; } // flatter glacier
         if (dist > 45) h = Math.min(h, -(dist - 45) * 0.8);
         verts.setY(i, h);
     }
@@ -370,7 +504,7 @@ function createTree(x, z, level) {
     ]);
     const trunk = new THREE.Mesh(
         new THREE.TubeGeometry(curve, 12, 0.18, 8, false),
-        new THREE.MeshPhongMaterial({ color: level===2 ? 0x4a3020 : 0x8B6914 })
+        new THREE.MeshPhongMaterial({ color: level===1 ? 0x4a3020 : 0x8B6914 })
     );
     trunk.castShadow = true;
     group.add(trunk);
@@ -656,6 +790,539 @@ function createBoulder(x, z) {
     enemies.push(boulder);
 }
 
+// === SANTA CLAUS NPC ===
+function createSantaModel() {
+    const group = new THREE.Group();
+    // Body - red suit
+    const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.45, 0.7, 8, 12),
+        new THREE.MeshPhongMaterial({ color: 0xcc0000 })
+    );
+    body.position.y = 1.0;
+    body.castShadow = true;
+    group.add(body);
+    // Belly (bigger than player)
+    const belly = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 10, 10),
+        new THREE.MeshPhongMaterial({ color: 0xcc0000 })
+    );
+    belly.position.set(0, 0.85, 0.2);
+    belly.scale.set(1, 1.1, 0.8);
+    group.add(belly);
+    // Belt
+    const belt = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.42, 0.1, 12),
+        new THREE.MeshPhongMaterial({ color: 0x111111 })
+    );
+    belt.position.y = 0.7;
+    group.add(belt);
+    // Belt buckle
+    const buckle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.08, 0.05),
+        new THREE.MeshPhongMaterial({ color: 0xffd700 })
+    );
+    buckle.position.set(0, 0.7, 0.43);
+    group.add(buckle);
+    // Head
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 12, 12),
+        new THREE.MeshPhongMaterial({ color: 0xeebb99 })
+    );
+    head.position.y = 1.7;
+    head.castShadow = true;
+    group.add(head);
+    // White beard
+    const beard = new THREE.Mesh(
+        new THREE.ConeGeometry(0.3, 0.5, 8),
+        new THREE.MeshPhongMaterial({ color: 0xffffff })
+    );
+    beard.position.set(0, 1.4, 0.15);
+    group.add(beard);
+    // Beard round part
+    const beardRound = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 8, 8),
+        new THREE.MeshPhongMaterial({ color: 0xffffff })
+    );
+    beardRound.position.set(0, 1.55, 0.2);
+    beardRound.scale.set(1, 0.8, 0.6);
+    group.add(beardRound);
+    // Santa hat
+    const hat = new THREE.Mesh(
+        new THREE.ConeGeometry(0.25, 0.5, 8),
+        new THREE.MeshPhongMaterial({ color: 0xcc0000 })
+    );
+    hat.position.set(0, 2.05, -0.05);
+    hat.rotation.x = -0.2;
+    group.add(hat);
+    // Hat brim (white)
+    const hatBrim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.28, 0.06, 8, 16),
+        new THREE.MeshPhongMaterial({ color: 0xffffff })
+    );
+    hatBrim.position.y = 1.9;
+    hatBrim.rotation.x = Math.PI/2;
+    group.add(hatBrim);
+    // Hat pom-pom
+    const pomPom = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.MeshPhongMaterial({ color: 0xffffff })
+    );
+    pomPom.position.set(0, 2.3, -0.1);
+    group.add(pomPom);
+    // Sack on back
+    const sack = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 8, 8),
+        new THREE.MeshPhongMaterial({ color: 0x8B6914 })
+    );
+    sack.position.set(0, 1.3, -0.5);
+    sack.scale.set(0.8, 1.0, 0.7);
+    sack.castShadow = true;
+    group.add(sack);
+    // Sack tie
+    const sackTie = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.08, 0.12, 6),
+        new THREE.MeshPhongMaterial({ color: 0x6b4226 })
+    );
+    sackTie.position.set(0, 1.85, -0.5);
+    group.add(sackTie);
+    // Legs
+    const legMat = new THREE.MeshPhongMaterial({ color: 0xcc0000 });
+    const bootMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+    [-0.18, 0.18].forEach((x, i) => {
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.25, 6, 8), legMat);
+        leg.position.set(x, 0.25, 0);
+        leg.userData = { isLeg: true, side: i };
+        group.add(leg);
+        const boot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.22), bootMat);
+        boot.position.set(x, 0.05, 0.03);
+        boot.userData = { isBoot: true, side: i };
+        group.add(boot);
+    });
+    // Eyes (simple dots)
+    [-0.1, 0.1].forEach(x => {
+        const eye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.04, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0x111111 })
+        );
+        eye.position.set(x, 1.75, 0.3);
+        group.add(eye);
+    });
+    // Nose (red)
+    const nose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 6, 6),
+        new THREE.MeshPhongMaterial({ color: 0xff4444 })
+    );
+    nose.position.set(0, 1.68, 0.33);
+    group.add(nose);
+
+    return group;
+}
+
+function spawnSanta() {
+    if (santaNPC) { scene.remove(santaNPC.group); santaNPC = null; }
+    const group = createSantaModel();
+    // Pick random start edge and end edge
+    const startAngle = Math.random() * Math.PI * 2;
+    const endAngle = startAngle + Math.PI + (Math.random() - 0.5) * 1.5;
+    const radius = 35;
+    const sx = Math.cos(startAngle) * radius;
+    const sz = Math.sin(startAngle) * radius;
+    const ex = Math.cos(endAngle) * radius;
+    const ez = Math.sin(endAngle) * radius;
+    // Generate waypoints through island
+    const waypoints = [];
+    const steps = 5;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const wx = sx + (ex - sx) * t + (Math.random() - 0.5) * 10;
+        const wz = sz + (ez - sz) * t + (Math.random() - 0.5) * 10;
+        waypoints.push(new THREE.Vector3(wx, 0, wz));
+    }
+    const sy = getTerrainHeight(sx, sz);
+    group.position.set(sx, Math.max(sy, 0.5), sz);
+    scene.add(group);
+    sfxSanta();
+    santaNPC = {
+        group,
+        waypoints,
+        waypointIdx: 0,
+        speed: 0.08,
+        lifetime: 0,
+        maxLifetime: 600, // ~10 seconds at 60fps
+    };
+}
+
+function updateSanta(t60) {
+    if (!santaNPC) return;
+    santaNPC.lifetime += t60;
+    if (santaNPC.lifetime > santaNPC.maxLifetime) {
+        scene.remove(santaNPC.group);
+        santaNPC = null;
+        return;
+    }
+    // Move toward current waypoint
+    const wp = santaNPC.waypoints[santaNPC.waypointIdx];
+    const g = santaNPC.group;
+    const dx = wp.x - g.position.x;
+    const dz = wp.z - g.position.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < 1.5) {
+        santaNPC.waypointIdx++;
+        if (santaNPC.waypointIdx >= santaNPC.waypoints.length) {
+            scene.remove(santaNPC.group);
+            santaNPC = null;
+            return;
+        }
+    } else {
+        const spd = santaNPC.speed * t60;
+        g.position.x += (dx / dist) * spd;
+        g.position.z += (dz / dist) * spd;
+        g.rotation.y = Math.atan2(dx, dz);
+    }
+    const ty = getTerrainHeight(g.position.x, g.position.z);
+    g.position.y = Math.max(ty, 0.5);
+    // Leg animation
+    const walkTime = santaNPC.lifetime * 0.4;
+    g.children.forEach(c => {
+        if (c.userData.isLeg || c.userData.isBoot) {
+            const off = c.userData.side === 0 ? 0 : Math.PI;
+            const swing = Math.sin(walkTime + off) * 0.3;
+            if (c.userData.isLeg) c.position.z = swing * 0.15;
+            if (c.userData.isBoot) c.position.z = 0.03 + swing * 0.15;
+        }
+    });
+    // Check player collision - give bonus wumpa
+    const playerDist = state.pos.distanceTo(g.position);
+    if (playerDist < 2.0) {
+        state.collected = Math.min(state.collected + 5, LEVELS[state.level].fruits);
+        sfxCollect();
+        spawnParticles(g.position.clone().add(new THREE.Vector3(0,1,0)), 0xff0000, 15, 0.5);
+        spawnParticles(g.position.clone().add(new THREE.Vector3(0,1,0)), 0x00ff00, 10, 0.4);
+        updateHUD();
+        // Pop the fruit counter
+        triggerFruitPop();
+        scene.remove(santaNPC.group);
+        santaNPC = null;
+        if (state.collected >= LEVELS[state.level].fruits) winLevel();
+    }
+}
+
+// === WATERFALLS ===
+function createWaterfall(x, z, height, level) {
+    const group = new THREE.Group();
+    const y = getTerrainHeight(x, z);
+    if (y < 3) return; // only place on higher terrain
+
+    // Rocky cliff face behind waterfall
+    const cliff = new THREE.Mesh(
+        new THREE.BoxGeometry(3, height, 1.5),
+        new THREE.MeshPhongMaterial({ color: LEVELS[level].rockColor, flatShading: true })
+    );
+    cliff.position.set(0, height/2, -0.5);
+    cliff.castShadow = true;
+    group.add(cliff);
+
+    // Animated water plane (blue translucent)
+    const waterGeo = new THREE.PlaneGeometry(1.5, height, 1, 8);
+    const waterMat = new THREE.MeshPhongMaterial({
+        color: 0x4488ff, transparent: true, opacity: 0.55,
+        emissive: 0x112244, side: THREE.DoubleSide
+    });
+    const waterPlane = new THREE.Mesh(waterGeo, waterMat);
+    waterPlane.position.set(0, height/2, 0.3);
+    group.add(waterPlane);
+
+    // Second layer for depth
+    const waterPlane2 = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.2, height, 1, 6),
+        new THREE.MeshPhongMaterial({ color: 0x66aaff, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+    );
+    waterPlane2.position.set(0.2, height/2, 0.5);
+    group.add(waterPlane2);
+
+    // Splash pool at base
+    const pool = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.5, 1.8, 0.3, 12),
+        new THREE.MeshPhongMaterial({ color: 0x3366aa, transparent: true, opacity: 0.6 })
+    );
+    pool.position.y = 0.15;
+    group.add(pool);
+
+    group.position.set(x, y - 1, z);
+    group.rotation.y = Math.random() * Math.PI * 2;
+    addObj(group);
+    waterfalls.push({ group, waterPlane, waterPlane2, pool, baseY: y - 1 });
+}
+
+// Splash particles for waterfalls
+function updateWaterfalls(t60, animTime) {
+    waterfalls.forEach(wf => {
+        // Animate water UVs to simulate cascading
+        const verts = wf.waterPlane.geometry.attributes.position;
+        for (let i = 0; i < verts.count; i++) {
+            const origX = wf.waterPlane.geometry.attributes.position.getX(i);
+            verts.setX(i, origX + Math.sin(animTime * 0.1 + i * 2) * 0.05);
+        }
+        verts.needsUpdate = true;
+        // Opacity shimmer
+        wf.waterPlane.material.opacity = 0.45 + Math.sin(animTime * 0.08) * 0.1;
+        wf.waterPlane2.material.opacity = 0.3 + Math.cos(animTime * 0.1) * 0.08;
+
+        // Spawn splash particles at base occasionally
+        if (Math.random() < 0.15 * t60) {
+            const pos = wf.group.position.clone();
+            pos.y += 0.3;
+            for (let i = 0; i < 2; i++) {
+                const p = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.04, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.5 })
+                );
+                p.position.set(
+                    pos.x + (Math.random()-0.5)*1.5,
+                    pos.y + Math.random()*0.3,
+                    pos.z + (Math.random()-0.5)*1.5
+                );
+                p.userData = {
+                    vel: new THREE.Vector3((Math.random()-0.5)*0.06, Math.random()*0.1+0.05, (Math.random()-0.5)*0.06),
+                    life: 25 + Math.random()*15
+                };
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+    });
+}
+
+// === WEATHER PARTICLES ===
+function createWeatherSystem(level) {
+    // Level 1 = Volcano: ash, Level 2 = Glacier: snow, Level 3 = Shadow Jungle: rain
+    let count, color, size, speed, spread;
+    if (level === 1) { // Volcano - ash
+        count = 80; color = 0x444444; size = 0.06; speed = -0.03; spread = 80;
+    } else if (level === 2) { // Glacier - snow
+        count = 120; color = 0xffffff; size = 0.05; speed = -0.02; spread = 80;
+    } else if (level === 3) { // Shadow Jungle - rain
+        count = 150; color = 0x6688bb; size = 0.02; speed = -0.15; spread = 80;
+    } else {
+        return; // Tropical Paradise has no special weather
+    }
+
+    for (let i = 0; i < count; i++) {
+        let geo;
+        if (level === 3) {
+            // Rain: thin stretched cylinders
+            geo = new THREE.CylinderGeometry(size, size, 0.3, 4);
+        } else {
+            geo = new THREE.SphereGeometry(size, 4, 4);
+        }
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: level === 3 ? 0.4 : 0.6 });
+        const p = new THREE.Mesh(geo, mat);
+        p.position.set(
+            (Math.random() - 0.5) * spread,
+            10 + Math.random() * 30,
+            (Math.random() - 0.5) * spread
+        );
+        p.userData = {
+            baseSpeed: speed,
+            drift: (Math.random() - 0.5) * 0.02,
+            driftZ: (Math.random() - 0.5) * 0.02,
+            spread: spread,
+        };
+        scene.add(p);
+        weatherParticles.push(p);
+    }
+}
+
+function updateWeather(t60) {
+    weatherParticles.forEach(p => {
+        p.position.y += p.userData.baseSpeed * t60;
+        p.position.x += p.userData.drift * t60;
+        p.position.z += p.userData.driftZ * t60;
+        // Reposition near player when out of range
+        if (p.position.y < -2) {
+            p.position.y = 20 + Math.random() * 15;
+            p.position.x = state.pos.x + (Math.random() - 0.5) * p.userData.spread;
+            p.position.z = state.pos.z + (Math.random() - 0.5) * p.userData.spread;
+        }
+        // Keep weather centered on player
+        const dx = p.position.x - state.pos.x;
+        const dz = p.position.z - state.pos.z;
+        if (Math.abs(dx) > p.userData.spread/2) {
+            p.position.x = state.pos.x + (Math.random() - 0.5) * p.userData.spread;
+        }
+        if (Math.abs(dz) > p.userData.spread/2) {
+            p.position.z = state.pos.z + (Math.random() - 0.5) * p.userData.spread;
+        }
+    });
+}
+
+// === CAVE ENTRANCES ===
+function createCaveEntrance(x, z, level) {
+    const group = new THREE.Group();
+    const y = getTerrainHeight(x, z);
+    if (y < 2) return;
+
+    // Dark arch (tunnel mouth)
+    const archGeo = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 8, 1, true, 0, Math.PI);
+    const archMat = new THREE.MeshPhongMaterial({ color: 0x111111, side: THREE.DoubleSide });
+    const arch = new THREE.Mesh(archGeo, archMat);
+    arch.rotation.x = Math.PI / 2;
+    arch.rotation.z = Math.PI;
+    arch.position.y = 1.25;
+    group.add(arch);
+
+    // Dark back wall
+    const backWall = new THREE.Mesh(
+        new THREE.CircleGeometry(1.2, 8, 0, Math.PI),
+        new THREE.MeshPhongMaterial({ color: 0x080808 })
+    );
+    backWall.position.set(0, 1.25, -1.2);
+    backWall.rotation.y = Math.PI;
+    group.add(backWall);
+
+    // Rock frame around entrance
+    const rockColor = LEVELS[level].rockColor;
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI;
+        const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(0.4 + Math.random() * 0.3, 0),
+            new THREE.MeshPhongMaterial({ color: rockColor, flatShading: true })
+        );
+        rock.position.set(
+            Math.cos(angle) * 1.3,
+            1.25 + Math.sin(angle) * 1.3,
+            0.1
+        );
+        rock.castShadow = true;
+        group.add(rock);
+    }
+
+    // Glow from inside (dim point light)
+    const caveLight = new THREE.PointLight(0x334455, 0.5, 5);
+    caveLight.position.set(0, 1, -0.5);
+    group.add(caveLight);
+
+    group.position.set(x, y - 0.5, z);
+    group.rotation.y = Math.atan2(-x, -z) + (Math.random() - 0.5) * 0.5; // face roughly inward
+    addObj(group);
+
+    // Place 3 bonus fruits inside/near cave
+    const fwd = new THREE.Vector3(-Math.sin(group.rotation.y), 0, -Math.cos(group.rotation.y));
+    for (let i = 0; i < 3; i++) {
+        const fx = x + fwd.x * (1.5 + i * 0.8) + (Math.random()-0.5)*0.5;
+        const fz = z + fwd.z * (1.5 + i * 0.8) + (Math.random()-0.5)*0.5;
+        createWumpa(fx, fz);
+    }
+
+    caveEntrances.push({ group, light: caveLight });
+}
+
+// === BLOB SHADOW ===
+function createBlobShadow() {
+    const geo = new THREE.CircleGeometry(0.4, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
+    blobShadow = new THREE.Mesh(geo, mat);
+    blobShadow.rotation.x = -Math.PI / 2;
+    blobShadow.renderOrder = -1; // render before other things
+    scene.add(blobShadow);
+}
+
+function updateBlobShadow() {
+    if (!blobShadow) return;
+    const tY = getTerrainHeight(state.pos.x, state.pos.z);
+    blobShadow.position.set(state.pos.x, tY + 0.05, state.pos.z);
+    // Scale based on height above ground
+    const heightAbove = Math.max(0, state.pos.y - tY);
+    const s = Math.max(0.3, 1.0 - heightAbove * 0.08);
+    blobShadow.scale.set(s, s, s);
+    blobShadow.material.opacity = Math.max(0.1, 0.35 - heightAbove * 0.03);
+}
+
+// === SPRINT TRAIL ===
+let trailTimer = 0;
+function updateSprintTrail(t60) {
+    const isSprinting = (keys['ShiftLeft'] || keys['ShiftRight']) &&
+        (keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD']);
+    if (isSprinting && state.grounded && !state.dying) {
+        trailTimer += t60;
+        if (trailTimer > 3) {
+            trailTimer = 0;
+            const trail = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 4, 4),
+                new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 })
+            );
+            trail.position.copy(state.pos);
+            trail.position.y += 0.3;
+            trail.userData = { life: 20 };
+            scene.add(trail);
+            sprintTrails.push(trail);
+        }
+    }
+    // Update existing trails
+    for (let i = sprintTrails.length - 1; i >= 0; i--) {
+        const t = sprintTrails[i];
+        t.userData.life -= t60;
+        t.material.opacity = Math.max(0, t.userData.life / 20 * 0.2);
+        t.scale.multiplyScalar(Math.pow(0.97, t60));
+        if (t.userData.life <= 0) {
+            scene.remove(t);
+            sprintTrails.splice(i, 1);
+        }
+    }
+}
+
+// === DUST/GRASS PARTICLES AT FEET ===
+let dustTimer = 0;
+function updateDustParticles(t60) {
+    const spd = Math.sqrt(state.vel.x*state.vel.x + state.vel.z*state.vel.z);
+    if (spd > 0.03 && state.grounded && !state.dying) {
+        dustTimer += t60;
+        if (dustTimer > 4) {
+            dustTimer = 0;
+            const tY = getTerrainHeight(state.pos.x, state.pos.z);
+            const L = LEVELS[state.level];
+            const dustColor = tY < 0.5 ? L.sand : L.ground[0];
+            const p = new THREE.Mesh(
+                new THREE.SphereGeometry(0.03 + Math.random()*0.02, 4, 4),
+                new THREE.MeshBasicMaterial({ color: dustColor, transparent: true, opacity: 0.4 })
+            );
+            p.position.set(
+                state.pos.x + (Math.random()-0.5)*0.3,
+                tY + 0.1,
+                state.pos.z + (Math.random()-0.5)*0.3
+            );
+            p.userData = {
+                vel: new THREE.Vector3((Math.random()-0.5)*0.02, Math.random()*0.03+0.01, (Math.random()-0.5)*0.02),
+                life: 15 + Math.random()*10,
+            };
+            scene.add(p);
+            particles.push(p);
+        }
+    }
+}
+
+// === DAY/NIGHT CYCLE ===
+function updateDayNightCycle(t60) {
+    dayNightTime += t60 * 0.0003; // very slow cycle
+    const cycle = Math.sin(dayNightTime);
+    // Map from [-1, 1] to intensity range
+    const intensityMod = 0.7 + cycle * 0.3; // ranges 0.4 to 1.0
+    sun.intensity = baseSunIntensity * intensityMod;
+    ambient.intensity = baseAmbientIntensity * intensityMod;
+
+    // Color shift: warm at "day", cool blue at "night"
+    const warmth = (cycle + 1) / 2; // 0 to 1
+    const sunR = 1.0;
+    const sunG = 0.9 + warmth * 0.06;
+    const sunB = 0.7 + warmth * 0.18;
+    sun.color.setRGB(sunR, sunG, sunB);
+
+    const ambR = 0.3 + warmth * 0.25;
+    const ambG = 0.35 + warmth * 0.3;
+    const ambB = 0.5 + warmth * 0.3;
+    ambient.color.setRGB(ambR, ambG, ambB);
+}
+
 // === PLAYER ===
 function createPlayer() {
     const group = new THREE.Group();
@@ -762,6 +1429,14 @@ function spawnShoreSplash(pos) {
     }
 }
 
+// === FRUIT POP ANIMATION ===
+function triggerFruitPop() {
+    const el = document.getElementById('hud-fruits');
+    el.classList.remove('fruit-pop');
+    void el.offsetWidth; // force reflow
+    el.classList.add('fruit-pop');
+}
+
 // === LEVEL BUILDER ===
 function buildLevel(levelIdx) {
     clearScene();
@@ -832,6 +1507,32 @@ function buildLevel(levelIdx) {
         }
         attempts++;
     }
+
+    // Waterfalls (2-3 per island)
+    const wfCount = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < wfCount; i++) {
+        const a = (i / wfCount) * Math.PI * 2 + Math.random() * 0.8;
+        const r = 15 + Math.random() * 15;
+        const wx = Math.cos(a) * r, wz = Math.sin(a) * r;
+        createWaterfall(wx, wz, 4 + Math.random() * 3, levelIdx);
+    }
+
+    // Weather system
+    createWeatherSystem(levelIdx);
+
+    // Cave entrances (2 per island)
+    for (let i = 0; i < 2; i++) {
+        const a = (i / 2) * Math.PI * 2 + Math.random() * 1.0 + 0.5;
+        const r = 18 + Math.random() * 12;
+        const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+        createCaveEntrance(cx, cz, levelIdx);
+    }
+
+    // Blob shadow
+    createBlobShadow();
+
+    // Reset day/night
+    dayNightTime = levelIdx === 3 ? Math.PI * 0.8 : 0; // Shadow Jungle starts darker
 }
 
 // === MINIMAP ===
@@ -882,6 +1583,19 @@ function drawMinimap() {
             mmCtx.fill();
         }
     });
+    // Santa (green dot)
+    if (santaNPC) {
+        const dx = santaNPC.group.position.x - state.pos.x;
+        const dz = santaNPC.group.position.z - state.pos.z;
+        const mx = w/2 + dx * 1.4;
+        const my = h/2 + dz * 1.4;
+        if (mx>0&&mx<w&&my>0&&my<h) {
+            mmCtx.fillStyle = '#00ff00';
+            mmCtx.beginPath();
+            mmCtx.arc(mx, my, 5, 0, Math.PI*2);
+            mmCtx.fill();
+        }
+    }
     // Player (white arrow)
     mmCtx.fillStyle = '#ffffff';
     mmCtx.beginPath();
@@ -955,6 +1669,25 @@ function triggerShake() {
     setTimeout(() => renderer.domElement.classList.remove('shake'), 300);
 }
 
+// === STAR RATING ===
+function getStarRating(levelIdx, timeSeconds) {
+    const target = TARGET_TIMES[levelIdx];
+    if (timeSeconds <= target) return 3; // gold
+    if (timeSeconds <= target * 1.5) return 2; // silver
+    if (timeSeconds <= target * 2) return 1; // bronze
+    return 0;
+}
+
+function showStars(stars) {
+    const container = document.getElementById('win-stars');
+    const starEls = container.querySelectorAll('.star');
+    const classes = ['gold', 'silver', 'bronze'];
+    const starClass = stars === 3 ? 'gold' : stars === 2 ? 'silver' : stars >= 1 ? 'bronze' : 'empty';
+    starEls.forEach((el, i) => {
+        el.className = 'star ' + (i < stars ? starClass : 'empty');
+    });
+}
+
 // === GAME FLOW ===
 function resetPlayerState() {
     state.pos.set(0, 5, 0);
@@ -969,6 +1702,9 @@ function resetPlayerState() {
     state.invincible = 0;
     state.won = false;
     state.screenShake = 0;
+    state.dying = false;
+    state.deathTimer = 0;
+    state.paused = false;
 }
 
 function startLevel(levelIdx) {
@@ -986,11 +1722,22 @@ function startLevel(levelIdx) {
     document.getElementById('start-overlay').style.display = 'none';
     document.getElementById('win-overlay').style.display = 'none';
     document.getElementById('level-overlay').style.display = 'none';
+    document.getElementById('pause-overlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     document.getElementById('minimap').style.display = 'block';
     document.getElementById('compass').style.display = 'block';
     document.getElementById('spin-indicator').style.display = 'block';
     document.getElementById('hud-level').textContent = `Level ${levelIdx+1}: ${LEVELS[levelIdx].name}`;
+
+    // Show best time
+    const best = getBestTime(levelIdx);
+    const bestEl = document.getElementById('hud-best');
+    if (best !== null) {
+        bestEl.textContent = `Best: ${best}s`;
+        bestEl.style.display = 'block';
+    } else {
+        bestEl.style.display = 'none';
+    }
 
     renderer.domElement.requestPointerLock();
     startMusic();
@@ -1002,10 +1749,23 @@ function winLevel() {
     sfxWin();
     document.exitPointerLock();
     const time = ((performance.now() - state.startTime)/1000).toFixed(1);
-    state.totalTime += parseFloat(time);
+    const timeNum = parseFloat(time);
+    state.totalTime += timeNum;
+
+    // Star rating
+    const stars = getStarRating(state.level, timeNum);
+    showStars(stars);
+
+    // Best time check
+    const prevBest = getBestTime(state.level);
+    const isNewBest = prevBest === null || timeNum < prevBest;
+    if (isNewBest) setBestTime(state.level, timeNum);
+    document.getElementById('win-new-best').style.display = isNewBest ? 'block' : 'none';
+
     if (state.level < LEVELS.length - 1) {
         document.getElementById('win-stats').textContent =
-            `All ${LEVELS[state.level].fruits} Wumpa Fruit collected in ${time}s!`;
+            `All ${LEVELS[state.level].fruits} Wumpa Fruit collected in ${time}s!` +
+            (prevBest !== null ? ` (Best: ${isNewBest ? time : prevBest}s)` : '');
         document.getElementById('win-overlay').querySelector('h1').textContent = 'ISLAND COMPLETE!';
         document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK FOR NEXT ISLAND';
     } else {
@@ -1034,19 +1794,53 @@ function nextLevel() {
 }
 
 function hitPlayer() {
-    if (state.invincible > 0 || state.spinning) return;
+    if (state.invincible > 0 || state.spinning || state.dying) return;
     sfxHit();
     triggerShake();
     state.health--;
     spawnParticles(state.pos.clone().add(new THREE.Vector3(0,0.8,0)), 0xff0000, 12);
     if (state.health <= 0) {
-        // Respawn with full health, keep collected fruits
-        state.health = 3;
-        state.pos.set(0, 8, 0);
-        state.vel.set(0, 0, 0);
+        // Start death animation
+        state.dying = true;
+        state.deathTimer = 0;
     }
     state.invincible = 90;
     updateHUD();
+}
+
+// === DEATH/RESPAWN ANIMATION ===
+function updateDeathAnimation(t60) {
+    if (!state.dying) return;
+    state.deathTimer += t60;
+    if (state.deathTimer < 40) {
+        // Shrink and spin phase
+        const t = state.deathTimer / 40;
+        const s = Math.max(0.01, 1.0 - t);
+        player.scale.set(s, s, s);
+        player.rotation.y += 0.3 * t60;
+        // Sink slightly
+        state.pos.y -= 0.02 * t60;
+    } else if (state.deathTimer < 50) {
+        // Brief pause at small size
+        player.scale.set(0.01, 0.01, 0.01);
+    } else if (state.deathTimer < 80) {
+        // Respawn: teleport and grow back
+        if (state.deathTimer - t60 < 50) {
+            // Just teleported
+            state.pos.set(0, 8, 0);
+            state.vel.set(0, 0, 0);
+            state.health = 3;
+            updateHUD();
+        }
+        const t = (state.deathTimer - 50) / 30;
+        const s = Math.min(1.0, t);
+        player.scale.set(s, s, s);
+    } else {
+        // Done
+        player.scale.set(1, 1, 1);
+        state.dying = false;
+        state.deathTimer = 0;
+    }
 }
 
 function updateHUD() {
@@ -1071,9 +1865,9 @@ document.getElementById('level-overlay').addEventListener('click', () => {
     startLevel(state.level + 1);
 });
 document.addEventListener('pointerlockchange', () => {
-    if (!document.pointerLockElement && state.started && !state.won) {
+    if (!document.pointerLockElement && state.started && !state.won && !state.paused) {
         renderer.domElement.addEventListener('click', () => {
-            if (state.started && !state.won) renderer.domElement.requestPointerLock();
+            if (state.started && !state.won && !state.paused) renderer.domElement.requestPointerLock();
         }, { once: true });
     }
 });
@@ -1096,9 +1890,57 @@ const _camLookTarget = new THREE.Vector3();
 const _spinOff = new THREE.Vector3(0, 0.8, 0);
 
 function update(dt) {
-    if (!state.started || state.won) return;
+    if (!state.started || state.won || state.paused) return;
     const t60 = dt * 60; // normalize: 1.0 at 60fps
     animTime += t60;
+
+    // Santa spawn timer (~45 seconds)
+    santaTimer += t60;
+    if (santaTimer > 2700 && !santaNPC) { // 2700 frames at 60fps = 45s
+        spawnSanta();
+        santaTimer = 0;
+    }
+    updateSanta(t60);
+
+    // Death animation
+    if (state.dying) {
+        updateDeathAnimation(t60);
+        // Still update camera etc but skip input
+        // Camera - SMOOTH LERP
+        const camDist = 6, camHeight = 3;
+        _camTarget.set(
+            state.pos.x + Math.sin(state.yaw)*camDist,
+            state.pos.y + camHeight - state.pitch*2,
+            state.pos.z + Math.cos(state.yaw)*camDist
+        );
+        const camTerrainY = getTerrainHeight(_camTarget.x, _camTarget.z) + 1.5;
+        _camTarget.y = Math.max(_camTarget.y, camTerrainY);
+        camSmooth.lerp(_camTarget, 0.08);
+        camera.position.copy(camSmooth);
+        _camLookTarget.set(state.pos.x, state.pos.y + 1.2, state.pos.z);
+        camLookSmooth.lerp(_camLookTarget, 0.12);
+        camera.lookAt(camLookSmooth);
+        player.position.lerp(state.pos, 0.4);
+        // Update particles during death
+        for (let i=particles.length-1; i>=0; i--) {
+            const p = particles[i];
+            p.position.x += p.userData.vel.x * t60;
+            p.position.y += p.userData.vel.y * t60;
+            p.position.z += p.userData.vel.z * t60;
+            p.userData.vel.y -= 0.005 * t60;
+            p.userData.life -= t60;
+            p.scale.multiplyScalar(Math.pow(0.96, t60));
+            if (p.userData.life<=0) { scene.remove(p); particles.splice(i,1); }
+        }
+        updateWeather(t60);
+        updateDayNightCycle(t60);
+        updateBlobShadow();
+        updateHUD();
+        if (oceanMesh) oceanMesh.position.y = -0.5 + Math.sin(performance.now()*0.001)*0.15;
+        sun.position.set(state.pos.x+50, 80, state.pos.z+30);
+        sun.target.position.copy(state.pos);
+        return;
+    }
 
     // Mouse look
     state.yaw -= mouseDX * MOUSE_SENS;
@@ -1163,11 +2005,16 @@ function update(dt) {
         state.grounded = true;
     }
 
-    // Water respawn
+    // Water respawn - now triggers death animation
     if (state.pos.y < -2) {
-        state.pos.set(0, 8, 0);
-        state.vel.set(0, 0, 0);
-        triggerShake();
+        if (!state.dying) {
+            state.dying = true;
+            state.deathTimer = 0;
+            state.health = Math.max(0, state.health); // keep health, death anim handles respawn
+            triggerShake();
+            // Force quick respawn for water death
+            state.deathTimer = 30;
+        }
     }
 
     // Shore splash effect
@@ -1252,6 +2099,7 @@ function update(dt) {
             state.collected++;
             sfxCollect();
             spawnParticles(f.position, 0xff6600, 8);
+            triggerFruitPop();
             updateHUD();
             if (state.collected >= LEVELS[state.level].fruits) winLevel();
         }
@@ -1269,6 +2117,7 @@ function update(dt) {
                 spawnParticles(c.position, 0xdeb887, 12, 0.35);
                 triggerShake();
                 state.collected = Math.min(state.collected + 2, LEVELS[state.level].fruits);
+                triggerFruitPop();
                 updateHUD();
                 if (state.collected >= LEVELS[state.level].fruits) winLevel();
             } else if (d < 0.9) {
@@ -1346,6 +2195,19 @@ function update(dt) {
     sun.position.set(state.pos.x+50, 80, state.pos.z+30);
     sun.target.position.copy(state.pos);
 
+    // === NEW SYSTEMS ===
+    updateWaterfalls(t60, animTime);
+    updateWeather(t60);
+    updateDayNightCycle(t60);
+    updateBlobShadow();
+    updateDustParticles(t60);
+    updateSprintTrail(t60);
+
+    // Cave entrance lights flicker
+    caveEntrances.forEach(c => {
+        c.light.intensity = 0.3 + Math.sin(animTime * 0.15 + c.group.position.x) * 0.2;
+    });
+
     // HUD (throttle minimap/compass to every ~3 frames)
     updateHUD();
     hudTimer += t60;
@@ -1358,7 +2220,9 @@ function animate() {
     const now = performance.now();
     const dt = Math.min((now - lastTime) / 1000, 0.05); // cap to prevent spiral
     lastTime = now;
-    update(dt);
+    if (!state.paused) {
+        update(dt);
+    }
     renderer.render(scene, camera);
 }
 animate();
