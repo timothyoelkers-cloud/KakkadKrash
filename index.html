@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KakkadKrash</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+        #game-canvas { display: block; width: 100vw; height: 100vh; }
+
+        #hud {
+            position: fixed; top: 15px; left: 15px; right: 15px;
+            display: none; justify-content: space-between; align-items: flex-start;
+            z-index: 100; pointer-events: none;
+        }
+        .hud-box {
+            background: rgba(0,0,0,0.7); border: 2px solid #f90;
+            border-radius: 10px; padding: 8px 14px; color: #fff;
+            font-size: 16px; font-weight: bold;
+        }
+        #hud-level { color: #ffd700; }
+
+        /* Minimap */
+        #minimap {
+            position: fixed; bottom: 20px; right: 20px; z-index: 100;
+            width: 160px; height: 160px; display: none;
+        }
+        #minimap canvas {
+            width: 100%; height: 100%; border-radius: 50%;
+            border: 3px solid rgba(255,153,0,0.8);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Compass */
+        #compass {
+            position: fixed; bottom: 20px; left: 20px; z-index: 100;
+            width: 80px; height: 80px; display: none;
+        }
+        #compass canvas {
+            width: 100%; height: 100%;
+        }
+
+        /* Spin indicator */
+        #spin-indicator {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 100; display: none; text-align: center;
+        }
+        #spin-bar-bg {
+            width: 120px; height: 8px; background: rgba(0,0,0,0.5);
+            border-radius: 4px; overflow: hidden;
+        }
+        #spin-bar {
+            width: 100%; height: 100%; background: #0ff;
+            border-radius: 4px; transition: width 0.1s;
+        }
+        #spin-label { color: #aaa; font-size: 11px; margin-top: 2px; }
+
+        /* Screen shake */
+        .shake { animation: shakeAnim 0.3s ease-out; }
+        @keyframes shakeAnim {
+            0% { transform: translate(0,0); }
+            20% { transform: translate(-4px, 3px); }
+            40% { transform: translate(4px, -2px); }
+            60% { transform: translate(-3px, -3px); }
+            80% { transform: translate(2px, 4px); }
+            100% { transform: translate(0,0); }
+        }
+
+        /* Overlays */
+        #start-overlay, #win-overlay, #level-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 200; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; cursor: pointer;
+        }
+        #start-overlay { background: rgba(0,0,0,0.88); }
+        #win-overlay { background: rgba(0,0,0,0.8); display: none; }
+        #level-overlay { background: rgba(0,0,0,0.85); display: none; }
+        #start-overlay h1 {
+            font-size: 72px; font-weight: 900; color: #f90;
+            text-shadow: 4px 4px 0 #c60, 8px 8px 0 rgba(0,0,0,0.4);
+            letter-spacing: 5px; margin-bottom: 10px;
+        }
+        .overlay-sub { font-size: 24px; color: #ffd700; margin-bottom: 40px; font-weight: 400; }
+        .start-msg { font-size: 26px; color: #fff; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+        .controls { color: #999; font-size: 14px; margin-top: 30px; text-align: center; line-height: 2.2; }
+        #win-overlay h1 { font-size: 60px; color: #0f0; margin-bottom: 15px; }
+        #level-overlay h1 { font-size: 54px; color: #ffd700; margin-bottom: 15px; }
+        #level-overlay .overlay-sub { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="hud">
+    <div>
+        <div class="hud-box" id="hud-fruits">Wumpa: 0 / 0</div>
+        <div class="hud-box" id="hud-level" style="margin-top:6px;">Level 1: Tropical</div>
+    </div>
+    <div class="hud-box" id="hud-time">Time: 0s</div>
+</div>
+
+<div id="minimap"><canvas id="minimap-canvas" width="200" height="200"></canvas></div>
+<div id="compass"><canvas id="compass-canvas" width="100" height="100"></canvas></div>
+<div id="spin-indicator">
+    <div id="spin-bar-bg"><div id="spin-bar"></div></div>
+    <div id="spin-label">SHIFT+Click = Spin</div>
+</div>
+
+<div id="start-overlay">
+    <h1>KAKKADKRASH</h1>
+    <div class="overlay-sub">Island Wumpa Hunt</div>
+    <div class="start-msg">CLICK ANYWHERE TO START</div>
+    <div class="controls">
+        WASD - Run &nbsp;|&nbsp; MOUSE - Look &nbsp;|&nbsp; SPACE - Jump<br>
+        SHIFT - Sprint &nbsp;|&nbsp; LEFT CLICK - Spin Attack<br>
+        Break crates, dodge enemies, collect all Wumpa Fruit!
+    </div>
+</div>
+
+<div id="win-overlay">
+    <h1>ISLAND COMPLETE!</h1>
+    <p class="overlay-sub" id="win-stats"></p>
+    <div class="start-msg">CLICK FOR NEXT ISLAND</div>
+</div>
+
+<div id="level-overlay">
+    <h1 id="level-title">Level 2</h1>
+    <div class="overlay-sub" id="level-theme">Volcano Island</div>
+    <div class="start-msg">CLICK TO BEGIN</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+// ============================================================
+// KAKKADKRASH - Full Featured Island Platformer
+// ============================================================
+
+// === LEVEL THEMES ===
+const LEVELS = [
+    { name: 'Tropical Paradise', sky: 0x5dade2, fog: 0x5dade2, ground: [0x3a7d44, 0x2d6b35], sand: 0xf0dca0, water: 0x1a6fb5, treeColor: 0x228B22, rockColor: 0x777766, fruits: 25, enemies: 6, crates: 10 },
+    { name: 'Volcano Island', sky: 0xcc4400, fog: 0x993300, ground: [0x4a3828, 0x3d2e20], sand: 0x5a4a3a, water: 0xcc3300, treeColor: 0x556b2f, rockColor: 0x555544, fruits: 30, enemies: 10, crates: 14 },
+    { name: 'Crystal Glacier', sky: 0xa8d8ea, fog: 0xc8e8f8, ground: [0xcce8f0, 0xb0d4e0], sand: 0xe8e8f0, water: 0x4488aa, treeColor: 0x88bbcc, rockColor: 0x99aabb, fruits: 35, enemies: 14, crates: 18 },
+    { name: 'Shadow Jungle', sky: 0x2a3a2a, fog: 0x1a2a1a, ground: [0x1a3a1a, 0x143014], sand: 0x4a5a3a, water: 0x0a3a2a, treeColor: 0x0a5a0a, rockColor: 0x3a4a3a, fruits: 40, enemies: 18, crates: 22 },
+];
+
+// === RENDERER ===
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.id = 'game-canvas';
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// === LIGHTING ===
+const ambient = new THREE.AmbientLight(0x88aacc, 0.7);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.2);
+sun.position.set(50, 80, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const sh = 80;
+sun.shadow.camera.left = -sh; sun.shadow.camera.right = sh;
+sun.shadow.camera.top = sh; sun.shadow.camera.bottom = -sh;
+sun.shadow.camera.far = 200;
+scene.add(sun);
+
+// === GAME STATE ===
+const state = {
+    pos: new THREE.Vector3(0, 5, 0),
+    vel: new THREE.Vector3(0, 0, 0),
+    yaw: 0, pitch: 0,
+    grounded: false,
+    collected: 0,
+    started: false,
+    won: false,
+    startTime: 0,
+    level: 0,
+    spinning: false,
+    spinTimer: 0,
+    spinCooldown: 0,
+    health: 3,
+    invincible: 0,
+    totalTime: 0,
+    screenShake: 0,
+};
+
+const GRAVITY = -0.02;
+const JUMP_VEL = 0.32;
+const MOVE_SPEED = 0.06;
+const SPRINT_MULT = 1.8;
+const FRICTION = 0.85;
+const MOUSE_SENS = 0.002;
+const SPIN_DURATION = 25;
+const SPIN_COOLDOWN = 50;
+
+// === INPUT ===
+const keys = {};
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+let mouseDX = 0, mouseDY = 0;
+document.addEventListener('mousemove', e => {
+    if (!document.pointerLockElement) return;
+    mouseDX += e.movementX;
+    mouseDY += e.movementY;
+});
+let mouseClicked = false;
+document.addEventListener('mousedown', e => {
+    if (e.button === 0 && document.pointerLockElement) mouseClicked = true;
+});
+
+// === AUDIO ===
+let audioCtx;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function snd(freq, dur, type='sine', vol=0.1) {
+    if (!audioCtx) return;
+    try {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        g.gain.setValueAtTime(vol, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch(e) {}
+}
+function sfxCollect() { snd(880, 0.1, 'sine', 0.13); setTimeout(() => snd(1320, 0.12, 'sine', 0.13), 70); }
+function sfxJump() { snd(440, 0.12, 'square', 0.07); }
+function sfxSpin() { snd(200, 0.2, 'sawtooth', 0.1); snd(350, 0.15, 'square', 0.06); }
+function sfxHit() { snd(100, 0.35, 'sawtooth', 0.18); }
+function sfxBreak() { snd(300, 0.12, 'square', 0.1); snd(150, 0.15, 'noise', 0.08); }
+function sfxEnemy() { snd(150, 0.3, 'sawtooth', 0.12); }
+function sfxWin() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>snd(f,0.25,'sine',0.14),i*140)); }
+
+// Simple background music using oscillators
+let musicPlaying = false;
+let musicOscs = [];
+function startMusic() {
+    if (musicPlaying || !audioCtx) return;
+    musicPlaying = true;
+    const notes = [261,329,392,329, 349,440,523,440, 294,370,440,370, 261,329,392,523];
+    let noteIdx = 0;
+    function playNote() {
+        if (!musicPlaying) return;
+        const freq = notes[noteIdx % notes.length];
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.03, audioCtx.currentTime + 0.3);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.5);
+        noteIdx++;
+        setTimeout(playNote, 500);
+    }
+    playNote();
+}
+function stopMusic() { musicPlaying = false; }
+
+// === FACE TEXTURE ===
+const faceTexture = new THREE.TextureLoader().load('face.png');
+
+// === SCENE OBJECTS (rebuilt per level) ===
+let islandMesh, oceanMesh;
+const sceneObjects = [];  // all level objects to clean up
+const wumpaFruits = [];
+const enemies = [];
+const crates = [];
+const particles = [];
+const tikiTorches = [];
+
+function clearScene() {
+    sceneObjects.forEach(o => scene.remove(o));
+    sceneObjects.length = 0;
+    wumpaFruits.length = 0;
+    enemies.length = 0;
+    crates.length = 0;
+    particles.forEach(p => scene.remove(p));
+    particles.length = 0;
+    tikiTorches.length = 0;
+    islandMesh = null;
+    if (oceanMesh) { scene.remove(oceanMesh); oceanMesh = null; }
+}
+
+function addObj(obj) { scene.add(obj); sceneObjects.push(obj); return obj; }
+
+// === TERRAIN ===
+function getTerrainHeight(wx, wz) {
+    if (!islandMesh) return 0;
+    const rc = new THREE.Raycaster(new THREE.Vector3(wx, 50, wz), new THREE.Vector3(0,-1,0));
+    const hits = rc.intersectObject(islandMesh);
+    return hits.length > 0 ? hits[0].point.y : 0;
+}
+
+function createIsland(level) {
+    const L = LEVELS[level];
+    scene.background = new THREE.Color(L.sky);
+    scene.fog = new THREE.FogExp2(L.fog, 0.008);
+    ambient.color.set(L.sky);
+    sun.color.set(level === 1 ? 0xff8844 : level === 2 ? 0xccddff : level === 3 ? 0x88aa88 : 0xfff4e0);
+
+    const size = 120;
+    const geo = new THREE.PlaneGeometry(size, size, 80, 80);
+    geo.rotateX(-Math.PI / 2);
+    const verts = geo.attributes.position;
+    for (let i = 0; i < verts.count; i++) {
+        const x = verts.getX(i), z = verts.getZ(i);
+        const dist = Math.sqrt(x*x + z*z);
+        let h = Math.max(0, 12 - dist * 0.25);
+        h += Math.sin(x*0.15) * Math.cos(z*0.12) * 3;
+        h += Math.sin(x*0.08+1) * Math.cos(z*0.06+2) * 2;
+        if (level === 1 && dist > 30) h += Math.sin(x*0.3)*Math.cos(z*0.3)*1.5; // extra hills
+        if (level === 1) { if (dist < 8) h = 2 + h * 0.2; }
+        if (level === 2) { h *= 1.3; } // taller volcano terrain
+        if (level === 3) { h *= 0.7; } // flatter glacier
+        if (dist > 45) h = Math.min(h, -(dist - 45) * 0.8);
+        verts.setY(i, h);
+    }
+    geo.computeVertexNormals();
+
+    const colors = new Float32Array(verts.count * 3);
+    for (let i = 0; i < verts.count; i++) {
+        const y = verts.getY(i);
+        let r, g, b;
+        const gc = L.ground;
+        if (y < 0.3) { const s = new THREE.Color(L.sand); r=s.r; g=s.g; b=s.b; }
+        else if (y < 3) { const c = new THREE.Color(gc[0]); r=c.r; g=c.g; b=c.b; }
+        else if (y < 7) { const c = new THREE.Color(gc[1]); r=c.r; g=c.g; b=c.b; }
+        else { r=0.45; g=0.42; b=0.35; }
+        const v = Math.sin(verts.getX(i)*3.7 + verts.getZ(i)*2.3) * 0.03;
+        colors[i*3]=r+v; colors[i*3+1]=g+v; colors[i*3+2]=b+v;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true });
+    islandMesh = new THREE.Mesh(geo, mat);
+    islandMesh.receiveShadow = true;
+    addObj(islandMesh);
+
+    // Ocean
+    const oGeo = new THREE.PlaneGeometry(600, 600);
+    oGeo.rotateX(-Math.PI / 2);
+    oceanMesh = new THREE.Mesh(oGeo, new THREE.MeshPhongMaterial({
+        color: L.water, transparent: true, opacity: 0.85, shininess: 100
+    }));
+    oceanMesh.position.y = -0.5;
+    scene.add(oceanMesh);
+}
+
+// === PALM TREES ===
+function createTree(x, z, level) {
+    const L = LEVELS[level];
+    const group = new THREE.Group();
+    const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0,0,0), new THREE.Vector3(0.3,2,0.2),
+        new THREE.Vector3(-0.1,4.5,-0.1), new THREE.Vector3(0.2,6.5,0),
+    ]);
+    const trunk = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 12, 0.18, 8, false),
+        new THREE.MeshPhongMaterial({ color: level===2 ? 0x4a3020 : 0x8B6914 })
+    );
+    trunk.castShadow = true;
+    group.add(trunk);
+    for (let i = 0; i < 7; i++) {
+        const angle = (i/7)*Math.PI*2;
+        const shape = new THREE.Shape();
+        shape.moveTo(0,0); shape.quadraticCurveTo(1.5,0.3,3.5,-0.8); shape.quadraticCurveTo(1.5,0.1,0,0);
+        const frond = new THREE.Mesh(
+            new THREE.ShapeGeometry(shape),
+            new THREE.MeshPhongMaterial({ color: L.treeColor, side: THREE.DoubleSide })
+        );
+        frond.position.set(0.2,6.6,0);
+        frond.rotation.set(-0.3, angle, Math.sin(angle)*0.2);
+        frond.castShadow = true;
+        group.add(frond);
+    }
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y, z);
+    group.rotation.y = Math.random()*Math.PI*2;
+    const sc = 0.8+Math.random()*0.5;
+    group.scale.set(sc,sc,sc);
+    addObj(group);
+}
+
+// === ROCKS ===
+function createRock(x, z, scale, level) {
+    const geo = new THREE.DodecahedronGeometry(scale, 1);
+    const v = geo.attributes.position;
+    for (let i=0;i<v.count;i++) {
+        v.setX(i, v.getX(i)+(Math.random()-0.5)*scale*0.3);
+        v.setY(i, v.getY(i)*0.6);
+        v.setZ(i, v.getZ(i)+(Math.random()-0.5)*scale*0.3);
+    }
+    geo.computeVertexNormals();
+    const rock = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: LEVELS[level].rockColor, flatShading:true }));
+    const y = getTerrainHeight(x, z);
+    rock.position.set(x, y+scale*0.3, z);
+    rock.rotation.y = Math.random()*Math.PI;
+    rock.castShadow = true; rock.receiveShadow = true;
+    addObj(rock);
+}
+
+// === TIKI TORCHES ===
+function createTikiTorch(x, z) {
+    const group = new THREE.Group();
+    // Post
+    const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.12, 2, 8),
+        new THREE.MeshPhongMaterial({ color: 0x6b4226 })
+    );
+    post.position.y = 1;
+    post.castShadow = true;
+    group.add(post);
+    // Carved face on post
+    const carving = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.25, 0.05),
+        new THREE.MeshPhongMaterial({ color: 0x4a2f1a })
+    );
+    carving.position.set(0, 1.5, 0.1);
+    group.add(carving);
+    // Fire glow (point light + simple flame mesh)
+    const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.3, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.9 })
+    );
+    flame.position.y = 2.2;
+    group.add(flame);
+    const light = new THREE.PointLight(0xff6622, 2, 8);
+    light.position.y = 2.3;
+    group.add(light);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y, z);
+    addObj(group);
+    tikiTorches.push({ group, flame, light, baseY: y });
+}
+
+// === TIKI HUTS ===
+function createTikiHut(x, z) {
+    const group = new THREE.Group();
+    // Base platform
+    const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.5, 1.8, 0.3, 8),
+        new THREE.MeshPhongMaterial({ color: 0x8B6914 })
+    );
+    base.position.y = 0.15;
+    base.receiveShadow = true;
+    group.add(base);
+    // Poles
+    for (let i = 0; i < 4; i++) {
+        const a = (i/4)*Math.PI*2 + Math.PI/4;
+        const pole = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.06, 2, 6),
+            new THREE.MeshPhongMaterial({ color: 0x6b4226 })
+        );
+        pole.position.set(Math.cos(a)*1.2, 1.3, Math.sin(a)*1.2);
+        pole.castShadow = true;
+        group.add(pole);
+    }
+    // Thatched roof
+    const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(2, 1.2, 8),
+        new THREE.MeshPhongMaterial({ color: 0xb8860b })
+    );
+    roof.position.y = 2.9;
+    roof.castShadow = true;
+    group.add(roof);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y, z);
+    addObj(group);
+}
+
+// === BUSHES ===
+function createBush(x, z, level) {
+    const group = new THREE.Group();
+    for (let i=0;i<3;i++) {
+        const m = new THREE.Mesh(
+            new THREE.SphereGeometry(0.4+Math.random()*0.3, 8, 8),
+            new THREE.MeshPhongMaterial({ color: LEVELS[level].treeColor, flatShading: true })
+        );
+        m.position.set((Math.random()-0.5)*0.6, Math.random()*0.2, (Math.random()-0.5)*0.6);
+        m.castShadow = true;
+        group.add(m);
+    }
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y+0.2, z);
+    addObj(group);
+}
+
+// === WUMPA FRUIT ===
+function createWumpa(x, z) {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 10, 10),
+        new THREE.MeshPhongMaterial({ color: 0xff6600, emissive: 0x331100, shininess: 60 })
+    );
+    body.castShadow = true;
+    group.add(body);
+    const leaf = new THREE.Mesh(
+        new THREE.ConeGeometry(0.1, 0.18, 6),
+        new THREE.MeshPhongMaterial({ color: 0x228B22 })
+    );
+    leaf.position.y = 0.28;
+    group.add(leaf);
+    // Glow ring
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.35, 0.03, 8, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.35 })
+    );
+    ring.rotation.x = Math.PI/2;
+    group.add(ring);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y+1.2, z);
+    group.userData = { collected: false, baseY: y+1.2 };
+    addObj(group);
+    wumpaFruits.push(group);
+}
+
+// === CRATES ===
+function createCrate(x, z) {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.9, 0.9),
+        new THREE.MeshPhongMaterial({ color: 0xdeb887 })
+    );
+    box.castShadow = true;
+    group.add(box);
+    // Markings
+    const markMat = new THREE.MeshPhongMaterial({ color: 0x8b4513 });
+    ['x','z'].forEach(axis => {
+        [-0.46, 0.46].forEach(d => {
+            const m = new THREE.Mesh(
+                axis === 'x' ? new THREE.BoxGeometry(0.05, 0.6, 0.6) : new THREE.BoxGeometry(0.6, 0.6, 0.05),
+                markMat
+            );
+            if (axis==='x') m.position.x=d; else m.position.z=d;
+            group.add(m);
+        });
+    });
+    // Question mark on top
+    const qMark = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.05, 0.3),
+        new THREE.MeshPhongMaterial({ color: 0xffcc00 })
+    );
+    qMark.position.y = 0.46;
+    group.add(qMark);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y+0.45, z);
+    group.userData = { broken: false, baseY: y+0.45 };
+    addObj(group);
+    crates.push(group);
+}
+
+// === ENEMIES ===
+// Crabs
+function createCrab(x, z) {
+    const group = new THREE.Group();
+    // Body
+    const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 8, 8),
+        new THREE.MeshPhongMaterial({ color: 0xcc3333, flatShading: true })
+    );
+    body.scale.set(1.3, 0.6, 1);
+    body.castShadow = true;
+    group.add(body);
+    // Eyes on stalks
+    [-0.25, 0.25].forEach(side => {
+        const stalk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.03, 0.03, 0.25, 6),
+            new THREE.MeshPhongMaterial({ color: 0xcc3333 })
+        );
+        stalk.position.set(side, 0.25, 0.15);
+        group.add(stalk);
+        const eye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0x111111 })
+        );
+        eye.position.set(side, 0.4, 0.15);
+        group.add(eye);
+    });
+    // Claws
+    [-0.55, 0.55].forEach(side => {
+        const claw = new THREE.Mesh(
+            new THREE.SphereGeometry(0.15, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0xdd4444 })
+        );
+        claw.position.set(side, -0.05, 0.1);
+        claw.scale.set(1, 0.6, 1.3);
+        group.add(claw);
+    });
+    // Legs
+    for (let i = 0; i < 3; i++) {
+        [-1, 1].forEach(side => {
+            const leg = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4),
+                new THREE.MeshPhongMaterial({ color: 0xaa2222 })
+            );
+            leg.position.set(side * (0.3 + i*0.12), -0.15, -0.1 + i*0.1);
+            leg.rotation.z = side * 0.6;
+            group.add(leg);
+        });
+    }
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y + 0.2, z);
+    // Patrol data
+    group.userData = {
+        alive: true, type: 'crab',
+        originX: x, originZ: z,
+        angle: Math.random()*Math.PI*2,
+        speed: 0.015 + Math.random()*0.01,
+        radius: 3 + Math.random()*4,
+    };
+    addObj(group);
+    enemies.push(group);
+}
+
+// Rolling boulders
+function createBoulder(x, z) {
+    const geo = new THREE.SphereGeometry(0.6, 8, 8);
+    const v = geo.attributes.position;
+    for (let i=0;i<v.count;i++) {
+        v.setX(i, v.getX(i)+(Math.random()-0.5)*0.1);
+        v.setY(i, v.getY(i)+(Math.random()-0.5)*0.1);
+        v.setZ(i, v.getZ(i)+(Math.random()-0.5)*0.1);
+    }
+    geo.computeVertexNormals();
+    const boulder = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0x666655, flatShading: true }));
+    const y = getTerrainHeight(x, z);
+    boulder.position.set(x, y+0.6, z);
+    boulder.castShadow = true;
+    boulder.userData = {
+        alive: true, type: 'boulder',
+        originX: x, originZ: z,
+        angle: Math.random()*Math.PI*2,
+        speed: 0.03 + Math.random()*0.02,
+        radius: 5 + Math.random()*5,
+    };
+    addObj(boulder);
+    enemies.push(boulder);
+}
+
+// === PLAYER ===
+function createPlayer() {
+    const group = new THREE.Group();
+    // Body (dark top)
+    const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.3, 0.5, 8, 12),
+        new THREE.MeshPhongMaterial({ color: 0x222222 })
+    );
+    body.position.y = 0.8; body.castShadow = true;
+    group.add(body);
+    // Belly
+    const belly = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 10, 10),
+        new THREE.MeshPhongMaterial({ color: 0x222222 })
+    );
+    belly.position.set(0, 0.7, 0.16); belly.scale.set(1, 1.1, 0.7);
+    group.add(belly);
+    // Head
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.38, 24, 24),
+        new THREE.MeshPhongMaterial({ color: 0xc8956c })
+    );
+    head.position.y = 1.4; head.castShadow = true;
+    group.add(head);
+    // Face
+    const face = new THREE.Mesh(
+        new THREE.CircleGeometry(0.36, 32),
+        new THREE.MeshBasicMaterial({ map: faceTexture })
+    );
+    face.position.set(0, 1.42, 0.2);
+    group.add(face);
+    // Hair
+    const hairMat = new THREE.MeshPhongMaterial({ color: 0x3b2314 });
+    const backHair = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.8, 8, 12), hairMat);
+    backHair.position.set(0, 1.2, -0.12);
+    group.add(backHair);
+    [-0.22, 0.22].forEach(x => {
+        const strand = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.9, 6, 8), hairMat);
+        strand.position.set(x, 0.9, -0.05);
+        group.add(strand);
+    });
+    const topHair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), hairMat);
+    topHair.position.set(0, 1.6, -0.05); topHair.scale.set(1, 0.6, 0.9);
+    group.add(topHair);
+    // Legs
+    const legMat = new THREE.MeshPhongMaterial({ color: 0x333344 });
+    const shoeMat = new THREE.MeshPhongMaterial({ color: 0xcc0000 });
+    [-0.15, 0.15].forEach((x, i) => {
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.25, 6, 8), legMat);
+        leg.position.set(x, 0.25, 0); leg.userData = { isLeg: true, side: i };
+        group.add(leg);
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), shoeMat);
+        shoe.position.set(x, 0.05, 0.03); shoe.userData = { isShoe: true, side: i };
+        group.add(shoe);
+    });
+    // Arms
+    [-0.38, 0.38].forEach((x, i) => {
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.25, 6, 8), new THREE.MeshPhongMaterial({ color: 0xc8956c }));
+        arm.position.set(x, 0.8, 0); arm.rotation.z = x < 0 ? 0.3 : -0.3;
+        arm.userData = { isArm: true, side: i };
+        group.add(arm);
+    });
+    return group;
+}
+
+const player = createPlayer();
+scene.add(player);
+
+// Spin attack visual ring
+const spinRingGeo = new THREE.TorusGeometry(0.8, 0.08, 8, 24);
+const spinRingMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0 });
+const spinRing = new THREE.Mesh(spinRingGeo, spinRingMat);
+spinRing.rotation.x = Math.PI/2;
+scene.add(spinRing);
+
+// === PARTICLES ===
+function spawnParticles(pos, color, count, spread=0.25) {
+    for (let i=0;i<count;i++) {
+        const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05+Math.random()*0.04, 4, 4),
+            new THREE.MeshBasicMaterial({ color })
+        );
+        p.position.copy(pos);
+        p.userData = {
+            vel: new THREE.Vector3((Math.random()-0.5)*spread, Math.random()*0.2+0.1, (Math.random()-0.5)*spread),
+            life: 40+Math.random()*20,
+        };
+        scene.add(p);
+        particles.push(p);
+    }
+}
+
+// Shore splash particles
+function spawnShoreSplash(pos) {
+    for (let i=0;i<5;i++) {
+        const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.04, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.6 })
+        );
+        p.position.set(pos.x+(Math.random()-0.5)*0.5, 0.1, pos.z+(Math.random()-0.5)*0.5);
+        p.userData = { vel: new THREE.Vector3((Math.random()-0.5)*0.05, Math.random()*0.08, (Math.random()-0.5)*0.05), life: 30 };
+        scene.add(p);
+        particles.push(p);
+    }
+}
+
+// === LEVEL BUILDER ===
+function buildLevel(levelIdx) {
+    clearScene();
+    const L = LEVELS[levelIdx];
+    createIsland(levelIdx);
+
+    // Trees
+    for (let i=0; i<35; i++) {
+        const a=Math.random()*Math.PI*2, r=8+Math.random()*35;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        const h=getTerrainHeight(x,z);
+        if (h>0.5&&h<8) createTree(x,z,levelIdx);
+    }
+    // Rocks
+    for (let i=0; i<20; i++) {
+        const a=Math.random()*Math.PI*2, r=5+Math.random()*40;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        if (getTerrainHeight(x,z)>0) createRock(x,z,0.5+Math.random()*1.5,levelIdx);
+    }
+    // Bushes
+    for (let i=0; i<25; i++) {
+        const a=Math.random()*Math.PI*2, r=6+Math.random()*35;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        const h=getTerrainHeight(x,z);
+        if (h>1&&h<7) createBush(x,z,levelIdx);
+    }
+    // Tiki torches
+    for (let i=0; i<12; i++) {
+        const a=Math.random()*Math.PI*2, r=8+Math.random()*30;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        const h=getTerrainHeight(x,z);
+        if (h>1&&h<6) createTikiTorch(x,z);
+    }
+    // Tiki huts (2-3 per level)
+    for (let i=0; i<2+levelIdx; i++) {
+        const a=(i/(2+levelIdx))*Math.PI*2+Math.random()*0.5;
+        const r=12+Math.random()*15;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        const h=getTerrainHeight(x,z);
+        if (h>1.5&&h<5) createTikiHut(x,z);
+    }
+    // Wumpa fruits
+    let placed=0, attempts=0;
+    while (placed<L.fruits && attempts<500) {
+        const a=Math.random()*Math.PI*2, r=5+Math.random()*38;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        if (getTerrainHeight(x,z)>0.8) { createWumpa(x,z); placed++; }
+        attempts++;
+    }
+    // Crates
+    placed=0; attempts=0;
+    while (placed<L.crates && attempts<300) {
+        const a=Math.random()*Math.PI*2, r=6+Math.random()*35;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        if (getTerrainHeight(x,z)>1) { createCrate(x,z); placed++; }
+        attempts++;
+    }
+    // Enemies
+    placed=0; attempts=0;
+    while (placed<L.enemies && attempts<300) {
+        const a=Math.random()*Math.PI*2, r=10+Math.random()*30;
+        const x=Math.cos(a)*r, z=Math.sin(a)*r;
+        const h=getTerrainHeight(x,z);
+        if (h>1&&h<7) {
+            if (Math.random()>0.4) createCrab(x,z);
+            else createBoulder(x,z);
+            placed++;
+        }
+        attempts++;
+    }
+}
+
+// === MINIMAP ===
+const mmCanvas = document.getElementById('minimap-canvas');
+const mmCtx = mmCanvas.getContext('2d');
+function drawMinimap() {
+    const w=200, h=200;
+    mmCtx.clearRect(0,0,w,h);
+    // Circular clip
+    mmCtx.save();
+    mmCtx.beginPath();
+    mmCtx.arc(w/2,h/2,w/2,0,Math.PI*2);
+    mmCtx.clip();
+    // Background (ocean)
+    const L = LEVELS[state.level];
+    mmCtx.fillStyle = '#' + new THREE.Color(L.water).getHexString();
+    mmCtx.fillRect(0,0,w,h);
+    // Island circle
+    mmCtx.fillStyle = '#' + new THREE.Color(L.ground[0]).getHexString();
+    mmCtx.beginPath();
+    mmCtx.arc(w/2, h/2, 70, 0, Math.PI*2);
+    mmCtx.fill();
+    // Fruits (yellow dots)
+    wumpaFruits.forEach(f => {
+        if (f.userData.collected) return;
+        const dx = f.position.x - state.pos.x;
+        const dz = f.position.z - state.pos.z;
+        const mx = w/2 + dx * 1.4;
+        const my = h/2 + dz * 1.4;
+        if (mx>0&&mx<w&&my>0&&my<h) {
+            mmCtx.fillStyle = '#ff8800';
+            mmCtx.beginPath();
+            mmCtx.arc(mx, my, 3, 0, Math.PI*2);
+            mmCtx.fill();
+        }
+    });
+    // Enemies (red dots)
+    enemies.forEach(e => {
+        if (!e.userData.alive) return;
+        const dx = e.position.x - state.pos.x;
+        const dz = e.position.z - state.pos.z;
+        const mx = w/2 + dx * 1.4;
+        const my = h/2 + dz * 1.4;
+        if (mx>0&&mx<w&&my>0&&my<h) {
+            mmCtx.fillStyle = '#ff2222';
+            mmCtx.beginPath();
+            mmCtx.arc(mx, my, 3, 0, Math.PI*2);
+            mmCtx.fill();
+        }
+    });
+    // Player (white arrow)
+    mmCtx.fillStyle = '#ffffff';
+    mmCtx.beginPath();
+    mmCtx.arc(w/2, h/2, 5, 0, Math.PI*2);
+    mmCtx.fill();
+    // Direction indicator
+    mmCtx.strokeStyle = '#ffffff';
+    mmCtx.lineWidth = 2;
+    mmCtx.beginPath();
+    mmCtx.moveTo(w/2, h/2);
+    mmCtx.lineTo(w/2 - Math.sin(state.yaw)*12, h/2 - Math.cos(state.yaw)*12);
+    mmCtx.stroke();
+    mmCtx.restore();
+}
+
+// === COMPASS ===
+const compCanvas = document.getElementById('compass-canvas');
+const compCtx = compCanvas.getContext('2d');
+function drawCompass() {
+    const w=100, h=100;
+    compCtx.clearRect(0,0,w,h);
+
+    // Find nearest uncollected fruit
+    let nearest = null, nearDist = Infinity;
+    wumpaFruits.forEach(f => {
+        if (f.userData.collected) return;
+        const d = state.pos.distanceTo(f.position);
+        if (d < nearDist) { nearDist = d; nearest = f; }
+    });
+
+    // Background circle
+    compCtx.fillStyle = 'rgba(0,0,0,0.5)';
+    compCtx.beginPath();
+    compCtx.arc(w/2,h/2,w/2-2,0,Math.PI*2);
+    compCtx.fill();
+
+    if (nearest) {
+        // Arrow pointing to nearest fruit
+        const dx = nearest.position.x - state.pos.x;
+        const dz = nearest.position.z - state.pos.z;
+        const angle = Math.atan2(dx, dz) - state.yaw;
+
+        compCtx.save();
+        compCtx.translate(w/2, h/2);
+        compCtx.rotate(-angle);
+
+        // Arrow
+        compCtx.fillStyle = '#ff8800';
+        compCtx.beginPath();
+        compCtx.moveTo(0, -30);
+        compCtx.lineTo(-10, 10);
+        compCtx.lineTo(0, 2);
+        compCtx.lineTo(10, 10);
+        compCtx.closePath();
+        compCtx.fill();
+
+        compCtx.restore();
+
+        // Distance text
+        compCtx.fillStyle = '#fff';
+        compCtx.font = 'bold 11px sans-serif';
+        compCtx.textAlign = 'center';
+        compCtx.fillText(Math.round(nearDist) + 'm', w/2, h-8);
+    }
+}
+
+// === SCREEN SHAKE ===
+function triggerShake() {
+    state.screenShake = 8;
+    renderer.domElement.classList.add('shake');
+    setTimeout(() => renderer.domElement.classList.remove('shake'), 300);
+}
+
+// === GAME FLOW ===
+function resetPlayerState() {
+    state.pos.set(0, 5, 0);
+    state.vel.set(0, 0, 0);
+    state.yaw = 0; state.pitch = 0;
+    state.grounded = false;
+    state.collected = 0;
+    state.spinning = false;
+    state.spinTimer = 0;
+    state.spinCooldown = 0;
+    state.health = 3;
+    state.invincible = 0;
+    state.won = false;
+    state.screenShake = 0;
+}
+
+function startLevel(levelIdx) {
+    state.level = levelIdx;
+    resetPlayerState();
+    buildLevel(levelIdx);
+    state.started = true;
+    state.startTime = performance.now();
+
+    document.getElementById('start-overlay').style.display = 'none';
+    document.getElementById('win-overlay').style.display = 'none';
+    document.getElementById('level-overlay').style.display = 'none';
+    document.getElementById('hud').style.display = 'flex';
+    document.getElementById('minimap').style.display = 'block';
+    document.getElementById('compass').style.display = 'block';
+    document.getElementById('spin-indicator').style.display = 'block';
+    document.getElementById('hud-level').textContent = `Level ${levelIdx+1}: ${LEVELS[levelIdx].name}`;
+
+    renderer.domElement.requestPointerLock();
+    startMusic();
+    updateHUD();
+}
+
+function winLevel() {
+    state.won = true;
+    sfxWin();
+    document.exitPointerLock();
+    const time = ((performance.now() - state.startTime)/1000).toFixed(1);
+    state.totalTime += parseFloat(time);
+    if (state.level < LEVELS.length - 1) {
+        document.getElementById('win-stats').textContent =
+            `All ${LEVELS[state.level].fruits} Wumpa Fruit collected in ${time}s!`;
+        document.getElementById('win-overlay').querySelector('h1').textContent = 'ISLAND COMPLETE!';
+        document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK FOR NEXT ISLAND';
+    } else {
+        document.getElementById('win-stats').textContent =
+            `All islands cleared! Total: ${state.totalTime.toFixed(1)}s`;
+        document.getElementById('win-overlay').querySelector('h1').textContent = 'YOU WIN!';
+        document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK TO PLAY AGAIN';
+    }
+    document.getElementById('win-overlay').style.display = 'flex';
+}
+
+function nextLevel() {
+    if (state.level < LEVELS.length - 1) {
+        const next = state.level + 1;
+        document.getElementById('level-title').textContent = `Level ${next+1}`;
+        document.getElementById('level-theme').textContent = LEVELS[next].name;
+        document.getElementById('win-overlay').style.display = 'none';
+        document.getElementById('level-overlay').style.display = 'flex';
+    } else {
+        // Beat all levels - restart
+        state.totalTime = 0;
+        state.level = 0;
+        document.getElementById('win-overlay').style.display = 'none';
+        startLevel(0);
+    }
+}
+
+function hitPlayer() {
+    if (state.invincible > 0 || state.spinning) return;
+    sfxHit();
+    triggerShake();
+    state.health--;
+    spawnParticles(state.pos.clone().add(new THREE.Vector3(0,0.8,0)), 0xff0000, 12);
+    if (state.health <= 0) {
+        // Respawn with full health, keep collected fruits
+        state.health = 3;
+        state.pos.set(0, 8, 0);
+        state.vel.set(0, 0, 0);
+    }
+    state.invincible = 90;
+    updateHUD();
+}
+
+function updateHUD() {
+    const L = LEVELS[state.level];
+    let hearts = '';
+    for (let i=0;i<state.health;i++) hearts += '\u2764\ufe0f';
+    document.getElementById('hud-fruits').innerHTML = `${hearts} &nbsp; Wumpa: ${state.collected}/${L.fruits}`;
+    const elapsed = state.started ? ((performance.now()-state.startTime)/1000).toFixed(1) : 0;
+    document.getElementById('hud-time').textContent = `Time: ${elapsed}s`;
+    // Spin cooldown bar
+    const pct = state.spinCooldown > 0 ? (1 - state.spinCooldown/SPIN_COOLDOWN)*100 : 100;
+    document.getElementById('spin-bar').style.width = pct + '%';
+    document.getElementById('spin-bar').style.background = pct >= 100 ? '#0ff' : '#666';
+}
+
+// === EVENT HANDLERS ===
+document.getElementById('start-overlay').addEventListener('click', () => {
+    initAudio(); state.totalTime = 0; startLevel(0);
+});
+document.getElementById('win-overlay').addEventListener('click', () => nextLevel());
+document.getElementById('level-overlay').addEventListener('click', () => {
+    startLevel(state.level + 1);
+});
+document.addEventListener('pointerlockchange', () => {
+    if (!document.pointerLockElement && state.started && !state.won) {
+        renderer.domElement.addEventListener('click', () => {
+            if (state.started && !state.won) renderer.domElement.requestPointerLock();
+        }, { once: true });
+    }
+});
+document.addEventListener('click', () => initAudio(), { once: true });
+
+// === GAME LOOP ===
+let animTime = 0;
+let shoreSplashTimer = 0;
+
+function update() {
+    if (!state.started || state.won) return;
+    animTime++;
+
+    // Mouse look
+    state.yaw -= mouseDX * MOUSE_SENS;
+    state.pitch -= mouseDY * MOUSE_SENS;
+    state.pitch = Math.max(-1.2, Math.min(0.8, state.pitch));
+    mouseDX = 0; mouseDY = 0;
+
+    // Movement
+    const fwd = new THREE.Vector3(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+    const rgt = new THREE.Vector3(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+    let moveDir = new THREE.Vector3(0,0,0);
+    if (keys['KeyW']||keys['ArrowUp']) moveDir.add(fwd);
+    if (keys['KeyS']||keys['ArrowDown']) moveDir.sub(fwd);
+    if (keys['KeyA']||keys['ArrowLeft']) moveDir.sub(rgt);
+    if (keys['KeyD']||keys['ArrowRight']) moveDir.add(rgt);
+    if (moveDir.length()>0) {
+        moveDir.normalize();
+        let spd = MOVE_SPEED;
+        if (keys['ShiftLeft']||keys['ShiftRight']) spd *= SPRINT_MULT;
+        state.vel.x += moveDir.x * spd;
+        state.vel.z += moveDir.z * spd;
+    }
+
+    // Jump
+    if (keys['Space'] && state.grounded) {
+        state.vel.y = JUMP_VEL;
+        state.grounded = false;
+        sfxJump();
+    }
+
+    // Spin attack (left click)
+    if (mouseClicked && state.spinCooldown <= 0 && !state.spinning) {
+        state.spinning = true;
+        state.spinTimer = SPIN_DURATION;
+        state.spinCooldown = SPIN_COOLDOWN;
+        sfxSpin();
+    }
+    mouseClicked = false;
+    if (state.spinning) {
+        state.spinTimer--;
+        if (state.spinTimer <= 0) state.spinning = false;
+    }
+    if (state.spinCooldown > 0) state.spinCooldown--;
+
+    // Invincibility
+    if (state.invincible > 0) state.invincible--;
+
+    // Physics
+    state.vel.y += GRAVITY;
+    state.vel.x *= FRICTION;
+    state.vel.z *= FRICTION;
+    state.pos.add(state.vel);
+
+    // Terrain
+    const tY = getTerrainHeight(state.pos.x, state.pos.z);
+    if (state.pos.y <= tY) {
+        state.pos.y = tY;
+        state.vel.y = 0;
+        state.grounded = true;
+    }
+
+    // Water respawn
+    if (state.pos.y < -2) {
+        state.pos.set(0, 8, 0);
+        state.vel.set(0, 0, 0);
+        triggerShake();
+    }
+
+    // Shore splash effect
+    if (tY > -0.5 && tY < 0.5 && state.grounded) {
+        shoreSplashTimer++;
+        if (shoreSplashTimer % 15 === 0) spawnShoreSplash(state.pos);
+    }
+
+    // Player model
+    player.position.copy(state.pos);
+    if (state.spinning) {
+        player.rotation.y += 0.5;
+    } else {
+        const spd = Math.sqrt(state.vel.x*state.vel.x + state.vel.z*state.vel.z);
+        if (spd > 0.005) {
+            const targetYaw = Math.atan2(state.vel.x, state.vel.z);
+            let diff = targetYaw - player.rotation.y;
+            while (diff>Math.PI) diff-=Math.PI*2;
+            while (diff<-Math.PI) diff+=Math.PI*2;
+            player.rotation.y += diff * 0.15;
+        }
+        // Run animation
+        player.children.forEach(c => {
+            if (c.userData.isLeg||c.userData.isShoe) {
+                const off = c.userData.side===0?0:Math.PI;
+                const swing = Math.sin(animTime*0.3+off)*Math.min(spd*8, 0.5);
+                if (c.userData.isLeg) c.position.z = swing*0.15;
+                if (c.userData.isShoe) c.position.z = 0.03+swing*0.15;
+            }
+            if (c.userData.isArm) {
+                const off = c.userData.side===0?Math.PI:0;
+                c.rotation.x = Math.sin(animTime*0.3+off)*Math.min(spd*8, 0.6);
+            }
+        });
+    }
+    // Blinking invincibility
+    player.visible = state.invincible > 0 ? Math.floor(state.invincible/4)%2===0 : true;
+
+    // Spin ring visual
+    if (state.spinning) {
+        spinRing.position.copy(state.pos).add(new THREE.Vector3(0, 0.8, 0));
+        spinRing.rotation.y = animTime * 0.3;
+        spinRingMat.opacity = 0.5;
+        spinRing.scale.set(1 + Math.sin(animTime*0.5)*0.1, 1, 1 + Math.sin(animTime*0.5)*0.1);
+    } else {
+        spinRingMat.opacity = 0;
+    }
+
+    // Camera
+    const camDist = 6, camHeight = 3;
+    const camX = state.pos.x + Math.sin(state.yaw)*camDist;
+    const camZ = state.pos.z + Math.cos(state.yaw)*camDist;
+    const camY = state.pos.y + camHeight - state.pitch*2;
+    // Simple camera terrain collision
+    const camTerrainY = getTerrainHeight(camX, camZ) + 1.5;
+    camera.position.set(camX, Math.max(camY, camTerrainY), camZ);
+    camera.lookAt(state.pos.x, state.pos.y+1.2, state.pos.z);
+
+    // Screen shake offset
+    if (state.screenShake > 0) {
+        camera.position.x += (Math.random()-0.5)*state.screenShake*0.02;
+        camera.position.y += (Math.random()-0.5)*state.screenShake*0.02;
+        state.screenShake--;
+    }
+
+    // === COLLISIONS ===
+    const pPos = state.pos.clone().add(new THREE.Vector3(0, 0.8, 0));
+
+    // Fruits
+    for (const f of wumpaFruits) {
+        if (f.userData.collected) continue;
+        if (pPos.distanceTo(f.position) < 1.5) {
+            f.userData.collected = true;
+            f.visible = false;
+            state.collected++;
+            sfxCollect();
+            spawnParticles(f.position, 0xff6600, 10);
+            updateHUD();
+            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+        }
+    }
+
+    // Crates
+    for (const c of crates) {
+        if (c.userData.broken) continue;
+        const d = pPos.distanceTo(c.position);
+        if (d < 1.2) {
+            if (state.spinning) {
+                c.userData.broken = true;
+                c.visible = false;
+                sfxBreak();
+                spawnParticles(c.position, 0xdeb887, 15, 0.35);
+                triggerShake();
+                // Bonus: crate drops 2 extra wumpa count
+                state.collected = Math.min(state.collected + 2, LEVELS[state.level].fruits);
+                updateHUD();
+                if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            } else if (d < 0.9) {
+                // Bump off crate
+                const pushDir = state.pos.clone().sub(c.position).normalize();
+                state.vel.x = pushDir.x * 0.1;
+                state.vel.z = pushDir.z * 0.1;
+            }
+        }
+    }
+
+    // Enemies
+    for (const e of enemies) {
+        if (!e.userData.alive) continue;
+        // Patrol movement
+        e.userData.angle += e.userData.speed;
+        const nx = e.userData.originX + Math.cos(e.userData.angle)*e.userData.radius;
+        const nz = e.userData.originZ + Math.sin(e.userData.angle)*e.userData.radius;
+        const ny = getTerrainHeight(nx, nz);
+        e.position.set(nx, ny + (e.userData.type==='crab'?0.2:0.6), nz);
+        // Boulder rolls
+        if (e.userData.type==='boulder') e.rotation.x += 0.05;
+        // Crab animation
+        if (e.userData.type==='crab') e.rotation.y = e.userData.angle + Math.PI/2;
+
+        // Collision with player
+        const d = pPos.distanceTo(e.position);
+        if (d < 1.0) {
+            if (state.spinning) {
+                // Kill enemy
+                e.userData.alive = false;
+                e.visible = false;
+                sfxEnemy();
+                spawnParticles(e.position, e.userData.type==='crab'?0xcc3333:0x666655, 12);
+            } else {
+                hitPlayer();
+            }
+        }
+    }
+
+    // Animate fruits
+    wumpaFruits.forEach(f => {
+        if (f.userData.collected) return;
+        f.rotation.y += 0.03;
+        f.position.y = f.userData.baseY + Math.sin(performance.now()*0.003+f.position.x)*0.2;
+    });
+
+    // Animate tiki torch flames
+    tikiTorches.forEach(t => {
+        t.flame.scale.y = 0.8 + Math.sin(animTime*0.3+t.group.position.x)*0.3;
+        t.flame.scale.x = 0.8 + Math.cos(animTime*0.4+t.group.position.z)*0.2;
+        t.light.intensity = 1.5 + Math.sin(animTime*0.2)*0.5;
+    });
+
+    // Animate crates (bob)
+    crates.forEach(c => {
+        if (c.userData.broken) return;
+        c.position.y = c.userData.baseY + Math.sin(animTime*0.05+c.position.x)*0.05;
+    });
+
+    // Update particles
+    for (let i=particles.length-1; i>=0; i--) {
+        const p = particles[i];
+        p.position.add(p.userData.vel);
+        p.userData.vel.y -= 0.005;
+        p.userData.life--;
+        p.scale.multiplyScalar(0.96);
+        if (p.userData.life<=0) { scene.remove(p); particles.splice(i,1); }
+    }
+
+    // Ocean animation
+    if (oceanMesh) oceanMesh.position.y = -0.5 + Math.sin(performance.now()*0.001)*0.15;
+
+    // Sun follow
+    sun.position.set(state.pos.x+50, 80, state.pos.z+30);
+    sun.target.position.copy(state.pos);
+
+    // HUD updates
+    updateHUD();
+    drawMinimap();
+    drawCompass();
+}
+
+// === RENDER LOOP ===
+function animate() {
+    requestAnimationFrame(animate);
+    update();
+    renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
