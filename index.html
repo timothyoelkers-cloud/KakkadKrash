@@ -145,7 +145,8 @@ const LEVELS = [
 ];
 
 // === RENDERER ===
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Cap for retina performance
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -154,6 +155,8 @@ document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+const camSmooth = new THREE.Vector3(); // smoothed camera position
+const camLookSmooth = new THREE.Vector3(); // smoothed look target
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -974,6 +977,11 @@ function startLevel(levelIdx) {
     buildLevel(levelIdx);
     state.started = true;
     state.startTime = performance.now();
+    lastTime = performance.now();
+
+    // Initialize smooth camera at player position
+    camSmooth.set(0, 8, 6);
+    camLookSmooth.set(0, 6, 0);
 
     document.getElementById('start-overlay').style.display = 'none';
     document.getElementById('win-overlay').style.display = 'none';
@@ -1074,10 +1082,23 @@ document.addEventListener('click', () => initAudio(), { once: true });
 // === GAME LOOP ===
 let animTime = 0;
 let shoreSplashTimer = 0;
+let lastTime = performance.now();
+let hudTimer = 0;
 
-function update() {
+// Reusable vectors (avoid GC from allocating every frame)
+const _fwd = new THREE.Vector3();
+const _rgt = new THREE.Vector3();
+const _moveDir = new THREE.Vector3();
+const _pPos = new THREE.Vector3();
+const _pushDir = new THREE.Vector3();
+const _camTarget = new THREE.Vector3();
+const _camLookTarget = new THREE.Vector3();
+const _spinOff = new THREE.Vector3(0, 0.8, 0);
+
+function update(dt) {
     if (!state.started || state.won) return;
-    animTime++;
+    const t60 = dt * 60; // normalize: 1.0 at 60fps
+    animTime += t60;
 
     // Mouse look
     state.yaw -= mouseDX * MOUSE_SENS;
@@ -1085,20 +1106,20 @@ function update() {
     state.pitch = Math.max(-1.2, Math.min(0.8, state.pitch));
     mouseDX = 0; mouseDY = 0;
 
-    // Movement
-    const fwd = new THREE.Vector3(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
-    const rgt = new THREE.Vector3(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
-    let moveDir = new THREE.Vector3(0,0,0);
-    if (keys['KeyW']||keys['ArrowUp']) moveDir.add(fwd);
-    if (keys['KeyS']||keys['ArrowDown']) moveDir.sub(fwd);
-    if (keys['KeyA']||keys['ArrowLeft']) moveDir.sub(rgt);
-    if (keys['KeyD']||keys['ArrowRight']) moveDir.add(rgt);
-    if (moveDir.length()>0) {
-        moveDir.normalize();
-        let spd = MOVE_SPEED;
+    // Movement (delta-time scaled)
+    _fwd.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+    _rgt.set(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+    _moveDir.set(0, 0, 0);
+    if (keys['KeyW']||keys['ArrowUp']) _moveDir.add(_fwd);
+    if (keys['KeyS']||keys['ArrowDown']) _moveDir.sub(_fwd);
+    if (keys['KeyA']||keys['ArrowLeft']) _moveDir.sub(_rgt);
+    if (keys['KeyD']||keys['ArrowRight']) _moveDir.add(_rgt);
+    if (_moveDir.lengthSq() > 0) {
+        _moveDir.normalize();
+        let spd = MOVE_SPEED * t60;
         if (keys['ShiftLeft']||keys['ShiftRight']) spd *= SPRINT_MULT;
-        state.vel.x += moveDir.x * spd;
-        state.vel.z += moveDir.z * spd;
+        state.vel.x += _moveDir.x * spd;
+        state.vel.z += _moveDir.z * spd;
     }
 
     // Jump
@@ -1117,19 +1138,22 @@ function update() {
     }
     mouseClicked = false;
     if (state.spinning) {
-        state.spinTimer--;
+        state.spinTimer -= t60;
         if (state.spinTimer <= 0) state.spinning = false;
     }
-    if (state.spinCooldown > 0) state.spinCooldown--;
+    if (state.spinCooldown > 0) state.spinCooldown -= t60;
 
     // Invincibility
-    if (state.invincible > 0) state.invincible--;
+    if (state.invincible > 0) state.invincible -= t60;
 
-    // Physics
-    state.vel.y += GRAVITY;
-    state.vel.x *= FRICTION;
-    state.vel.z *= FRICTION;
-    state.pos.add(state.vel);
+    // Physics (delta-time scaled)
+    state.vel.y += GRAVITY * t60;
+    const ff = Math.pow(FRICTION, t60);
+    state.vel.x *= ff;
+    state.vel.z *= ff;
+    state.pos.x += state.vel.x * t60;
+    state.pos.y += state.vel.y * t60;
+    state.pos.z += state.vel.z * t60;
 
     // Terrain
     const tY = getTerrainHeight(state.pos.x, state.pos.z);
@@ -1152,10 +1176,10 @@ function update() {
         if (shoreSplashTimer % 15 === 0) spawnShoreSplash(state.pos);
     }
 
-    // Player model
-    player.position.copy(state.pos);
+    // Player model - lerp for smoothness
+    player.position.lerp(state.pos, 0.4);
     if (state.spinning) {
-        player.rotation.y += 0.5;
+        player.rotation.y += 0.5 * t60;
     } else {
         const spd = Math.sqrt(state.vel.x*state.vel.x + state.vel.z*state.vel.z);
         if (spd > 0.005) {
@@ -1163,7 +1187,7 @@ function update() {
             let diff = targetYaw - player.rotation.y;
             while (diff>Math.PI) diff-=Math.PI*2;
             while (diff<-Math.PI) diff+=Math.PI*2;
-            player.rotation.y += diff * 0.15;
+            player.rotation.y += diff * 0.2; // smoother turn
         }
         // Run animation
         player.children.forEach(c => {
@@ -1184,43 +1208,50 @@ function update() {
 
     // Spin ring visual
     if (state.spinning) {
-        spinRing.position.copy(state.pos).add(new THREE.Vector3(0, 0.8, 0));
+        spinRing.position.copy(state.pos).add(_spinOff);
         spinRing.rotation.y = animTime * 0.3;
         spinRingMat.opacity = 0.5;
-        spinRing.scale.set(1 + Math.sin(animTime*0.5)*0.1, 1, 1 + Math.sin(animTime*0.5)*0.1);
+        const s = 1 + Math.sin(animTime*0.5)*0.1;
+        spinRing.scale.set(s, 1, s);
     } else {
         spinRingMat.opacity = 0;
     }
 
-    // Camera
+    // Camera - SMOOTH LERP
     const camDist = 6, camHeight = 3;
-    const camX = state.pos.x + Math.sin(state.yaw)*camDist;
-    const camZ = state.pos.z + Math.cos(state.yaw)*camDist;
-    const camY = state.pos.y + camHeight - state.pitch*2;
-    // Simple camera terrain collision
-    const camTerrainY = getTerrainHeight(camX, camZ) + 1.5;
-    camera.position.set(camX, Math.max(camY, camTerrainY), camZ);
-    camera.lookAt(state.pos.x, state.pos.y+1.2, state.pos.z);
+    _camTarget.set(
+        state.pos.x + Math.sin(state.yaw)*camDist,
+        state.pos.y + camHeight - state.pitch*2,
+        state.pos.z + Math.cos(state.yaw)*camDist
+    );
+    const camTerrainY = getTerrainHeight(_camTarget.x, _camTarget.z) + 1.5;
+    _camTarget.y = Math.max(_camTarget.y, camTerrainY);
+    camSmooth.lerp(_camTarget, 0.08);
+    camera.position.copy(camSmooth);
+
+    _camLookTarget.set(state.pos.x, state.pos.y + 1.2, state.pos.z);
+    camLookSmooth.lerp(_camLookTarget, 0.12);
+    camera.lookAt(camLookSmooth);
 
     // Screen shake offset
     if (state.screenShake > 0) {
         camera.position.x += (Math.random()-0.5)*state.screenShake*0.02;
         camera.position.y += (Math.random()-0.5)*state.screenShake*0.02;
-        state.screenShake--;
+        state.screenShake -= t60;
     }
 
-    // === COLLISIONS ===
-    const pPos = state.pos.clone().add(new THREE.Vector3(0, 0.8, 0));
+    // === COLLISIONS (reuse vectors) ===
+    _pPos.copy(state.pos); _pPos.y += 0.8;
 
     // Fruits
     for (const f of wumpaFruits) {
         if (f.userData.collected) continue;
-        if (pPos.distanceTo(f.position) < 1.5) {
+        if (_pPos.distanceTo(f.position) < 1.5) {
             f.userData.collected = true;
             f.visible = false;
             state.collected++;
             sfxCollect();
-            spawnParticles(f.position, 0xff6600, 10);
+            spawnParticles(f.position, 0xff6600, 8);
             updateHUD();
             if (state.collected >= LEVELS[state.level].fruits) winLevel();
         }
@@ -1229,50 +1260,45 @@ function update() {
     // Crates
     for (const c of crates) {
         if (c.userData.broken) continue;
-        const d = pPos.distanceTo(c.position);
+        const d = _pPos.distanceTo(c.position);
         if (d < 1.2) {
             if (state.spinning) {
                 c.userData.broken = true;
                 c.visible = false;
                 sfxBreak();
-                spawnParticles(c.position, 0xdeb887, 15, 0.35);
+                spawnParticles(c.position, 0xdeb887, 12, 0.35);
                 triggerShake();
-                // Bonus: crate drops 2 extra wumpa count
                 state.collected = Math.min(state.collected + 2, LEVELS[state.level].fruits);
                 updateHUD();
                 if (state.collected >= LEVELS[state.level].fruits) winLevel();
             } else if (d < 0.9) {
-                // Bump off crate
-                const pushDir = state.pos.clone().sub(c.position).normalize();
-                state.vel.x = pushDir.x * 0.1;
-                state.vel.z = pushDir.z * 0.1;
+                _pushDir.copy(state.pos).sub(c.position).normalize();
+                state.vel.x = _pushDir.x * 0.1;
+                state.vel.z = _pushDir.z * 0.1;
             }
         }
     }
 
-    // Enemies
+    // Enemies (cached terrain height every ~6 frames)
     for (const e of enemies) {
         if (!e.userData.alive) continue;
-        // Patrol movement
-        e.userData.angle += e.userData.speed;
+        e.userData.angle += e.userData.speed * t60;
         const nx = e.userData.originX + Math.cos(e.userData.angle)*e.userData.radius;
         const nz = e.userData.originZ + Math.sin(e.userData.angle)*e.userData.radius;
-        const ny = getTerrainHeight(nx, nz);
-        e.position.set(nx, ny + (e.userData.type==='crab'?0.2:0.6), nz);
-        // Boulder rolls
-        if (e.userData.type==='boulder') e.rotation.x += 0.05;
-        // Crab animation
+        if (!e.userData._hc || Math.abs(animTime - e.userData._ht) > 6) {
+            e.userData._hc = getTerrainHeight(nx, nz);
+            e.userData._ht = animTime;
+        }
+        e.position.set(nx, e.userData._hc + (e.userData.type==='crab'?0.2:0.6), nz);
+        if (e.userData.type==='boulder') e.rotation.x += 0.05 * t60;
         if (e.userData.type==='crab') e.rotation.y = e.userData.angle + Math.PI/2;
 
-        // Collision with player
-        const d = pPos.distanceTo(e.position);
-        if (d < 1.0) {
+        if (_pPos.distanceTo(e.position) < 1.0) {
             if (state.spinning) {
-                // Kill enemy
                 e.userData.alive = false;
                 e.visible = false;
                 sfxEnemy();
-                spawnParticles(e.position, e.userData.type==='crab'?0xcc3333:0x666655, 12);
+                spawnParticles(e.position, e.userData.type==='crab'?0xcc3333:0x666655, 10);
             } else {
                 hitPlayer();
             }
@@ -1280,17 +1306,19 @@ function update() {
     }
 
     // Animate fruits
+    const now = performance.now();
     wumpaFruits.forEach(f => {
         if (f.userData.collected) return;
-        f.rotation.y += 0.03;
-        f.position.y = f.userData.baseY + Math.sin(performance.now()*0.003+f.position.x)*0.2;
+        f.rotation.y += 0.03 * t60;
+        f.position.y = f.userData.baseY + Math.sin(now*0.003+f.position.x)*0.2;
     });
 
-    // Animate tiki torch flames
+    // Tiki torch flames - only light nearby ones
     tikiTorches.forEach(t => {
         t.flame.scale.y = 0.8 + Math.sin(animTime*0.3+t.group.position.x)*0.3;
         t.flame.scale.x = 0.8 + Math.cos(animTime*0.4+t.group.position.z)*0.2;
-        t.light.intensity = 1.5 + Math.sin(animTime*0.2)*0.5;
+        const dist = state.pos.distanceTo(t.group.position);
+        t.light.intensity = dist < 15 ? (1.5 + Math.sin(animTime*0.2)*0.5) : 0;
     });
 
     // Animate crates (bob)
@@ -1299,33 +1327,38 @@ function update() {
         c.position.y = c.userData.baseY + Math.sin(animTime*0.05+c.position.x)*0.05;
     });
 
-    // Update particles
+    // Update particles (delta-time scaled)
     for (let i=particles.length-1; i>=0; i--) {
         const p = particles[i];
-        p.position.add(p.userData.vel);
-        p.userData.vel.y -= 0.005;
-        p.userData.life--;
-        p.scale.multiplyScalar(0.96);
+        p.position.x += p.userData.vel.x * t60;
+        p.position.y += p.userData.vel.y * t60;
+        p.position.z += p.userData.vel.z * t60;
+        p.userData.vel.y -= 0.005 * t60;
+        p.userData.life -= t60;
+        p.scale.multiplyScalar(Math.pow(0.96, t60));
         if (p.userData.life<=0) { scene.remove(p); particles.splice(i,1); }
     }
 
-    // Ocean animation
-    if (oceanMesh) oceanMesh.position.y = -0.5 + Math.sin(performance.now()*0.001)*0.15;
+    // Ocean
+    if (oceanMesh) oceanMesh.position.y = -0.5 + Math.sin(now*0.001)*0.15;
 
     // Sun follow
     sun.position.set(state.pos.x+50, 80, state.pos.z+30);
     sun.target.position.copy(state.pos);
 
-    // HUD updates
+    // HUD (throttle minimap/compass to every ~3 frames)
     updateHUD();
-    drawMinimap();
-    drawCompass();
+    hudTimer += t60;
+    if (hudTimer > 3) { hudTimer = 0; drawMinimap(); drawCompass(); }
 }
 
-// === RENDER LOOP ===
+// === RENDER LOOP (delta-time) ===
 function animate() {
     requestAnimationFrame(animate);
-    update();
+    const now = performance.now();
+    const dt = Math.min((now - lastTime) / 1000, 0.05); // cap to prevent spiral
+    lastTime = now;
+    update(dt);
     renderer.render(scene, camera);
 }
 animate();
