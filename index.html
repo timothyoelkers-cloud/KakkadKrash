@@ -171,11 +171,271 @@
         }
         #pw-btn:hover { transform: scale(1.05); }
         #pw-error-msg { color: #f33; font-size: 14px; margin-top: 12px; height: 20px; }
+
+        /* Loading Screen */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 400; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #loading-overlay h1 {
+            font-size: 64px; font-weight: 900; color: #f90;
+            text-shadow: 4px 4px 0 #c60, 8px 8px 0 rgba(0,0,0,0.4);
+            letter-spacing: 5px; margin-bottom: 40px;
+        }
+        #loading-bar-container {
+            width: 300px; height: 20px; background: rgba(255,255,255,0.15);
+            border-radius: 10px; overflow: hidden; border: 2px solid #555;
+        }
+        #loading-bar {
+            width: 0%; height: 100%; background: #f90;
+            border-radius: 8px; transition: width 0.2s;
+        }
+        #loading-text { color: #aaa; font-size: 14px; margin-top: 12px; }
+
+        /* FPS Counter */
+        #fps-counter {
+            position: fixed; top: 15px; right: 15px; z-index: 150;
+            background: rgba(0,0,0,0.7); color: #0f0; font-size: 14px;
+            font-weight: bold; padding: 4px 10px; border-radius: 6px;
+            font-family: monospace; display: none; pointer-events: none;
+        }
+
+        /* Death Messages */
+        #death-message {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 180; color: #fff; font-size: 24px; font-weight: bold;
+            background: rgba(0,0,0,0.7); padding: 12px 28px; border-radius: 25px;
+            pointer-events: none; display: none; text-align: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #death-message.show { opacity: 1; }
+
+        /* Tutorial Popups */
+        #tutorial-popup {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            z-index: 160; background: rgba(0,0,0,0.7); color: #fff;
+            font-size: 20px; font-weight: bold; padding: 14px 30px;
+            border-radius: 12px; border: 2px solid rgba(255,153,0,0.5);
+            pointer-events: none; display: none; text-align: center;
+            opacity: 0; transition: opacity 0.5s;
+            max-width: 90vw;
+        }
+        #tutorial-popup.show { opacity: 1; }
+
+        /* Mobile/Touch Controls */
+        #mobile-joystick {
+            position: fixed; bottom: 30px; left: 30px; z-index: 120;
+            width: 120px; height: 120px; display: none;
+            pointer-events: all; touch-action: none;
+        }
+        #joystick-base {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: rgba(255,255,255,0.15); border: 3px solid rgba(255,255,255,0.3);
+            position: relative;
+        }
+        #joystick-thumb {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .mobile-btn {
+            position: fixed; z-index: 120;
+            border-radius: 50%; display: none;
+            color: #fff; font-weight: 900; font-size: 18px;
+            text-align: center; pointer-events: all;
+            touch-action: none; user-select: none;
+            -webkit-user-select: none;
+        }
+        .mobile-btn:active { opacity: 0.9; }
+        #mobile-btn-jump {
+            bottom: 70px; right: 30px; width: 60px; height: 60px;
+            line-height: 60px; background: rgba(0,200,0,0.4);
+            border: 3px solid rgba(0,200,0,0.6);
+        }
+        #mobile-btn-spin {
+            bottom: 70px; right: 100px; width: 60px; height: 60px;
+            line-height: 60px; background: rgba(0,200,255,0.4);
+            border: 3px solid rgba(0,200,255,0.6);
+        }
+        #mobile-btn-pound {
+            bottom: 20px; right: 65px; width: 45px; height: 45px;
+            line-height: 45px; font-size: 14px;
+            background: rgba(255,100,0,0.4);
+            border: 3px solid rgba(255,100,0,0.6);
+        }
+        #mobile-btn-interact {
+            bottom: 140px; right: 55px; width: 50px; height: 50px;
+            line-height: 50px; font-size: 16px;
+            background: rgba(255,255,0,0.4);
+            border: 3px solid rgba(255,255,0,0.6);
+            display: none;
+        }
+        /* Volume slider in pause menu */
+        .pause-slider-container + .pause-slider-container { margin-top: 10px; }
+
+        /* Photo Mode Overlay */
+        #photo-mode-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 170; pointer-events: none; display: none;
+        }
+        #photo-mode-label {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 32px; font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 4px;
+        }
+        #photo-mode-exit {
+            position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+            color: #aaa; font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Hats section in pause menu */
+        .pause-hats-container {
+            margin-top: 20px; text-align: center; color: #ccc; font-size: 14px;
+        }
+        .hat-options {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+            margin-top: 8px;
+        }
+        .hat-btn {
+            background: rgba(255,153,0,0.3); border: 2px solid #555;
+            color: #fff; font-size: 14px; font-weight: bold;
+            padding: 8px 16px; border-radius: 8px; cursor: pointer;
+            pointer-events: all;
+        }
+        .hat-btn:hover { background: rgba(255,153,0,0.5); }
+        .hat-btn.active { border-color: #ffd700; background: rgba(255,153,0,0.6); }
+        .hat-btn.locked { color: #555; border-color: #333; cursor: not-allowed; background: rgba(50,50,50,0.4); }
+        .hat-btn.locked:hover { background: rgba(50,50,50,0.4); }
+
+        /* Secret level message on win screen */
+        #secret-level-msg {
+            font-size: 22px; font-weight: bold; margin-top: 10px;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* Credits Screen */
+        #credits-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 260; background: rgba(0,0,0,0.92); display: none;
+            overflow: hidden; cursor: pointer;
+        }
+        #credits-content {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            text-align: center; white-space: nowrap;
+            animation: creditsScroll 25s linear forwards;
+        }
+        @keyframes creditsScroll {
+            0% { top: 100%; }
+            100% { top: -120%; }
+        }
+        .credits-line { padding: 4px 0; }
+
+        /* Achievement Toast */
+        #achievement-toast {
+            position: fixed; top: 80px; right: -350px; z-index: 280;
+            width: 310px; padding: 14px 18px;
+            background: linear-gradient(135deg, #cc6600, #ff9900);
+            border: 3px solid #ffd700; border-radius: 12px;
+            color: #fff; font-family: 'Segoe UI', sans-serif;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: right 0.4s ease;
+            pointer-events: none;
+        }
+        #achievement-toast.show { right: 20px; }
+        #achievement-toast .ach-toast-icon {
+            display: inline-block; width: 36px; height: 36px; line-height: 36px;
+            text-align: center; background: #ffd700; color: #333;
+            border-radius: 50%; font-weight: 900; font-size: 18px;
+            vertical-align: middle; margin-right: 10px;
+        }
+        #achievement-toast .ach-toast-text { display: inline-block; vertical-align: middle; }
+        #achievement-toast .ach-toast-name { font-size: 18px; font-weight: bold; }
+        #achievement-toast .ach-toast-desc { font-size: 13px; color: #ffe0aa; margin-top: 2px; }
+
+        /* Achievement Overlay */
+        #achievement-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 260; background: rgba(0,0,0,0.9); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            cursor: default;
+        }
+        #achievement-overlay h1 {
+            font-size: 42px; color: #ffd700; margin-bottom: 20px;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+        }
+        #achievement-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px; max-width: 800px; width: 90%; max-height: 60vh;
+            overflow-y: auto; padding: 10px;
+        }
+        .ach-card {
+            background: rgba(60,60,60,0.6); border: 2px solid #555;
+            border-radius: 10px; padding: 12px 14px; display: flex;
+            align-items: center; gap: 12px;
+        }
+        .ach-card.unlocked {
+            background: linear-gradient(135deg, rgba(180,130,0,0.4), rgba(255,200,0,0.15));
+            border-color: #ffd700;
+        }
+        .ach-card .ach-icon {
+            width: 40px; height: 40px; line-height: 40px; text-align: center;
+            border-radius: 50%; font-weight: 900; font-size: 20px; flex-shrink: 0;
+        }
+        .ach-card.unlocked .ach-icon { background: #ffd700; color: #333; }
+        .ach-card:not(.unlocked) .ach-icon { background: #444; color: #666; }
+        .ach-card .ach-info-name { font-size: 16px; font-weight: bold; color: #fff; }
+        .ach-card:not(.unlocked) .ach-info-name { color: #888; }
+        .ach-card .ach-info-desc { font-size: 12px; color: #aaa; margin-top: 2px; }
+        .ach-card:not(.unlocked) .ach-info-desc { color: #555; }
+        #ach-close-btn {
+            margin-top: 20px; padding: 10px 35px; font-size: 18px; font-weight: bold;
+            background: rgba(255,153,0,0.8); border: none; color: #fff;
+            border-radius: 8px; cursor: pointer; pointer-events: all;
+        }
+        #ach-close-btn:hover { background: rgba(255,180,50,0.9); }
+
+        /* Share Score Toast */
+        #share-toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 280; background: rgba(0,0,0,0.85); color: #0f0;
+            font-size: 18px; font-weight: bold; padding: 10px 28px;
+            border-radius: 25px; border: 2px solid #0f0;
+            pointer-events: none; display: none;
+        }
+
+        /* Share Score Button */
+        .share-btn {
+            background: linear-gradient(180deg, #4488ff, #2266cc); border: 2px solid #fff;
+            border-radius: 8px; color: #fff; font-size: 18px; font-weight: bold;
+            padding: 10px 30px; cursor: pointer; margin-top: 10px;
+            pointer-events: all;
+        }
+        .share-btn:hover { background: linear-gradient(180deg, #66aaff, #4488ff); }
+
+        /* Friend Score Banner */
+        #friend-score-banner {
+            background: linear-gradient(135deg, rgba(255,153,0,0.3), rgba(255,200,0,0.15));
+            border: 2px solid #ffd700; border-radius: 10px;
+            padding: 10px 20px; margin-top: 15px; display: none;
+            color: #ffd700; font-size: 16px; font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
 
-<div id="password-overlay">
+<div id="loading-overlay">
+    <h1>KAKKADKRASH</h1>
+    <div id="loading-bar-container"><div id="loading-bar"></div></div>
+    <div id="loading-text">Loading...</div>
+</div>
+
+<div id="password-overlay" style="display:none;">
     <h1>KAKKADKRASH</h1>
     <p>Enter password to play</p>
     <input type="password" id="pw-input" placeholder="Password" autocomplete="off">
@@ -200,15 +460,53 @@
 </div>
 
 <div id="unlock-notify"></div>
+<div id="photo-mode-overlay">
+    <div id="photo-mode-label">PHOTO MODE</div>
+    <div id="photo-mode-exit">Press P to exit</div>
+</div>
+<div id="fps-counter">-- FPS</div>
+<div id="death-message"></div>
+<div id="tutorial-popup"></div>
+
+<!-- Achievement Toast -->
+<div id="achievement-toast">
+    <span class="ach-toast-icon"></span>
+    <span class="ach-toast-text">
+        <div class="ach-toast-name"></div>
+        <div class="ach-toast-desc"></div>
+    </span>
+</div>
+
+<!-- Share Score Toast -->
+<div id="share-toast">Link copied!</div>
+
+<!-- Credits Screen -->
+<div id="credits-overlay"></div>
+
+<!-- Achievement Overlay -->
+<div id="achievement-overlay">
+    <h1>ACHIEVEMENTS</h1>
+    <div id="achievement-grid"></div>
+    <button id="ach-close-btn">Close</button>
+</div>
+
+<!-- Mobile Controls -->
+<div id="mobile-joystick"><div id="joystick-base"><div id="joystick-thumb"></div></div></div>
+<div class="mobile-btn" id="mobile-btn-jump">A</div>
+<div class="mobile-btn" id="mobile-btn-spin">B</div>
+<div class="mobile-btn" id="mobile-btn-pound">GP</div>
+<div class="mobile-btn" id="mobile-btn-interact">E</div>
 
 <div id="start-overlay">
     <h1>KAKKADKRASH</h1>
     <div class="overlay-sub">Island Wumpa Hunt</div>
+    <div id="friend-score-banner"></div>
     <div class="start-msg">CLICK ANYWHERE TO START</div>
     <div class="controls">
         WASD - Run &nbsp;|&nbsp; MOUSE - Look &nbsp;|&nbsp; SPACE - Jump<br>
         SHIFT - Sprint &nbsp;|&nbsp; LEFT CLICK - Spin Attack &nbsp;|&nbsp; ESC - Pause<br>
         C - Ground Pound &nbsp;|&nbsp; E - Interact (Zipline/Surfboard/Chest)<br>
+        P - Photo Mode &nbsp;|&nbsp; F - FPS Counter<br>
         Break crates, dodge enemies, collect all Wumpa Fruit!
     </div>
 </div>
@@ -222,6 +520,8 @@
         <span class="star empty">&#9733;</span>
     </div>
     <p class="overlay-sub" id="win-stats"></p>
+    <div id="secret-level-msg" style="display:none;"></div>
+    <button class="share-btn" id="share-score-btn" style="display:none;" onclick="event.stopPropagation(); shareScore();">Share Score</button>
     <div class="start-msg">CLICK FOR NEXT ISLAND</div>
 </div>
 
@@ -239,6 +539,22 @@
         <input type="range" id="sens-slider" min="1" max="10" step="0.5" value="4">
         <div id="sens-value" style="margin-top:4px;">4.0</div>
     </div>
+    <div class="pause-slider-container">
+        Sound<br>
+        <input type="range" id="vol-slider" min="0" max="100" step="1" value="70">
+        <div id="vol-value" style="margin-top:4px;">70%</div>
+    </div>
+    <div class="pause-hats-container">
+        Hats<br>
+        <div class="hat-options" id="hat-options">
+            <button class="hat-btn active" data-hat="none">None</button>
+            <button class="hat-btn locked" data-hat="pirate">Pirate</button>
+            <button class="hat-btn locked" data-hat="crown">Crown</button>
+            <button class="hat-btn locked" data-hat="santa">Santa</button>
+        </div>
+    </div>
+    <button class="pause-btn" id="pause-achievements-btn" style="margin-top:15px;">Achievements</button>
+    <button class="pause-btn" id="pause-credits-btn">Credits</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -253,10 +569,79 @@ const LEVELS = [
     { name: 'Volcano Island', sky: 0xcc4400, fog: 0x993300, ground: [0x4a3828, 0x3d2e20], sand: 0x5a4a3a, water: 0xcc3300, treeColor: 0x556b2f, rockColor: 0x555544, fruits: 30, enemies: 10, crates: 14 },
     { name: 'Crystal Glacier', sky: 0xa8d8ea, fog: 0xc8e8f8, ground: [0xcce8f0, 0xb0d4e0], sand: 0xe8e8f0, water: 0x4488aa, treeColor: 0x88bbcc, rockColor: 0x99aabb, fruits: 35, enemies: 14, crates: 18 },
     { name: 'Shadow Jungle', sky: 0x2a3a2a, fog: 0x1a2a1a, ground: [0x1a3a1a, 0x143014], sand: 0x4a5a3a, water: 0x0a3a2a, treeColor: 0x0a5a0a, rockColor: 0x3a4a3a, fruits: 40, enemies: 18, crates: 22 },
+    { name: "Kakkad's Sky Kingdom", sky: 0xff6633, fog: 0xff8844, ground: [0x8866aa, 0x7755aa], sand: 0xddbb88, water: 0xff4422, treeColor: 0xaa66cc, rockColor: 0x9988aa, fruits: 20, enemies: 12, crates: 15 },
 ];
 
 // Target times for star ratings (seconds)
-const TARGET_TIMES = [60, 90, 120, 150];
+const TARGET_TIMES = [60, 90, 120, 150, 120];
+
+// === NEW FEATURE GLOBALS ===
+const isTouchDevice = 'ontouchstart' in window;
+
+// Photo mode state
+let photoMode = false;
+let photoCamYaw = 0, photoCamPitch = 0;
+const photoCamPos = new THREE.Vector3();
+const photoCamDir = new THREE.Vector3();
+
+// Hat system
+let activeHat = 'none';
+let hatMeshGroup = null;
+const collectedHats = { pirate: false, crown: false, santa: false };
+try {
+    if (localStorage.getItem('kk_hat_pirate') === '1') collectedHats.pirate = true;
+    if (localStorage.getItem('kk_hat_crown') === '1') collectedHats.crown = true;
+    if (localStorage.getItem('kk_hat_santa') === '1') collectedHats.santa = true;
+    const savedHat = localStorage.getItem('kk_activeHat');
+    if (savedHat && (savedHat === 'none' || collectedHats[savedHat])) activeHat = savedHat;
+} catch(e) {}
+
+// Golden wumpa per-level tracking for secret level
+function checkAllGoldenComplete() {
+    try {
+        return localStorage.getItem('kk_goldenL0') === '1' &&
+               localStorage.getItem('kk_goldenL1') === '1' &&
+               localStorage.getItem('kk_goldenL2') === '1' &&
+               localStorage.getItem('kk_goldenL3') === '1';
+    } catch(e) { return false; }
+}
+function markGoldenComplete() {
+    try { localStorage.setItem('kk_goldenComplete', '1'); } catch(e) {}
+}
+let levelGoldenCollected = 0; // count of golden wumpa collected in current level
+let levelGoldenTotal = 3; // total golden wumpa per level
+
+// Hat pedestal objects (for caves)
+const hatPedestals = [];
+
+// Cloud meshes (for sky kingdom)
+const skyKingdomClouds = [];
+
+let gameVolume = 0.7; // 0-1, default 70%
+try { const sv = localStorage.getItem('kk_volume'); if (sv !== null) gameVolume = parseFloat(sv); } catch(e) {}
+let fpsVisible = false;
+let fpsFrames = 0, fpsLastTime = performance.now(), fpsDisplay = 0;
+let tutorialShown = false;
+try { tutorialShown = localStorage.getItem('kk_tutorialShown') === '1'; } catch(e) {}
+let tutorialTimer = 0;
+let tutorialActive = false;
+const DEATH_MESSAGES = [
+    "Kakkad took a swim!",
+    "That crab meant business!",
+    "Gravity: 1, Kakkad: 0",
+    "Boulder says hello!",
+    "Maybe try jumping?",
+    "Kakkad needs a vacation...",
+    "That's gonna leave a mark!",
+    "The island fights back!",
+    "Respawning with dignity... mostly",
+    "Note to self: avoid that"
+];
+// Mobile touch state
+let mobileJoystickActive = false;
+let mobileJoystickX = 0, mobileJoystickY = 0;
+let mobileCameraTouchId = null;
+let mobileCameraLastX = 0, mobileCameraLastY = 0;
 
 // === RENDERER ===
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -349,18 +734,25 @@ const keys = {};
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
-    if (e.code === 'Escape' && state.started && !state.won) togglePause();
+    if (e.code === 'Escape' && state.started && !state.won && !photoMode) togglePause();
+    if (e.code === 'KeyF') {
+        fpsVisible = !fpsVisible;
+        document.getElementById('fps-counter').style.display = fpsVisible ? 'block' : 'none';
+    }
+    if (e.code === 'KeyP' && state.started && !state.won && !state.paused) {
+        togglePhotoMode();
+    }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 let mouseDX = 0, mouseDY = 0;
 document.addEventListener('mousemove', e => {
-    if (!document.pointerLockElement) return;
+    if (!document.pointerLockElement && !isTouchDevice) return;
     mouseDX += e.movementX;
     mouseDY += e.movementY;
 });
 let mouseClicked = false;
 document.addEventListener('mousedown', e => {
-    if (e.button === 0 && document.pointerLockElement) mouseClicked = true;
+    if (e.button === 0 && (document.pointerLockElement || isTouchDevice)) mouseClicked = true;
 });
 
 // === PAUSE MENU ===
@@ -369,10 +761,10 @@ function togglePause() {
     state.paused = !state.paused;
     document.getElementById('pause-overlay').style.display = state.paused ? 'flex' : 'none';
     if (state.paused) {
-        document.exitPointerLock();
+        if (!isTouchDevice) document.exitPointerLock();
         stopMusic();
     } else {
-        renderer.domElement.requestPointerLock();
+        if (!isTouchDevice) renderer.domElement.requestPointerLock();
         startMusic();
         lastTime = performance.now(); // reset dt so no jump
     }
@@ -387,6 +779,17 @@ sensSlider.addEventListener('input', () => {
     const v = parseFloat(sensSlider.value);
     MOUSE_SENS = v * 0.0005;
     sensValue.textContent = v.toFixed(1);
+});
+// Volume slider
+const volSlider = document.getElementById('vol-slider');
+const volValue = document.getElementById('vol-value');
+volSlider.value = Math.round(gameVolume * 100);
+volValue.textContent = Math.round(gameVolume * 100) + '%';
+volSlider.addEventListener('input', () => {
+    const v = parseInt(volSlider.value);
+    gameVolume = v / 100;
+    volValue.textContent = v + '%';
+    try { localStorage.setItem('kk_volume', gameVolume.toString()); } catch(e) {}
 });
 
 // === LOCALSTORAGE BEST TIMES ===
@@ -405,7 +808,8 @@ function snd(freq, dur, type='sine', vol=0.1) {
     try {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
         o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        g.gain.setValueAtTime(vol, audioCtx.currentTime);
+        const adjVol = vol * gameVolume;
+        g.gain.setValueAtTime(adjVol, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
         o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur);
     } catch(e) {}
@@ -454,7 +858,7 @@ function sfxFireworkWhistle() {
         o.type = 'sine';
         o.frequency.setValueAtTime(400, audioCtx.currentTime);
         o.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
-        g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.06 * gameVolume, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
         o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.4);
     } catch(e) {}
@@ -485,8 +889,9 @@ function startMusic() {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
         o.type = 'sine';
         o.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        g.gain.setValueAtTime(0.03, audioCtx.currentTime);
-        g.gain.setValueAtTime(0.03, audioCtx.currentTime + 0.3);
+        const mv = 0.03 * gameVolume;
+        g.gain.setValueAtTime(mv, audioCtx.currentTime);
+        g.gain.setValueAtTime(mv, audioCtx.currentTime + 0.3);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
         o.connect(g); g.connect(audioCtx.destination);
         o.start(); o.stop(audioCtx.currentTime + 0.5);
@@ -497,8 +902,57 @@ function startMusic() {
 }
 function stopMusic() { musicPlaying = false; }
 
-// === FACE TEXTURE ===
-const faceTexture = new THREE.TextureLoader().load('face.png');
+// === FACE TEXTURE (with loading screen) ===
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingBar = document.getElementById('loading-bar');
+const loadingText = document.getElementById('loading-text');
+let faceTextureLoaded = false;
+
+const faceTexture = new THREE.TextureLoader().load(
+    'face.png',
+    function onLoad() {
+        faceTextureLoaded = true;
+        loadingBar.style.width = '100%';
+        loadingText.textContent = 'Ready!';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            document.getElementById('password-overlay').style.display = 'flex';
+            document.getElementById('pw-input').focus();
+        }, 400);
+    },
+    function onProgress(xhr) {
+        if (xhr.lengthComputable) {
+            const pct = Math.round((xhr.loaded / xhr.total) * 100);
+            loadingBar.style.width = pct + '%';
+            loadingText.textContent = 'Loading textures... ' + pct + '%';
+        } else {
+            loadingBar.style.width = '50%';
+            loadingText.textContent = 'Loading textures...';
+        }
+    },
+    function onError() {
+        // Still let them through even if face.png fails
+        loadingBar.style.width = '100%';
+        loadingText.textContent = 'Ready!';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            document.getElementById('password-overlay').style.display = 'flex';
+            document.getElementById('pw-input').focus();
+        }, 400);
+    }
+);
+// Fallback: if texture loads too fast (cached), make sure loading screen goes away
+setTimeout(() => {
+    if (loadingOverlay.style.display !== 'none') {
+        loadingBar.style.width = '100%';
+        loadingText.textContent = 'Ready!';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            document.getElementById('password-overlay').style.display = 'flex';
+            document.getElementById('pw-input').focus();
+        }, 300);
+    }
+}, 3000);
 
 // === SCENE OBJECTS (rebuilt per level) ===
 let islandMesh, oceanMesh;
@@ -581,6 +1035,10 @@ function clearScene() {
     domeFish.length = 0;
     groundPoundRings.forEach(r => scene.remove(r));
     groundPoundRings.length = 0;
+    hatPedestals.length = 0;
+    skyKingdomClouds.forEach(c => scene.remove(c));
+    skyKingdomClouds.length = 0;
+    levelGoldenCollected = 0;
     state.onZipline = false;
     state.ziplineData = null;
     state.onSurfboard = false;
@@ -604,11 +1062,11 @@ function createIsland(level) {
     scene.background = new THREE.Color(L.sky);
     scene.fog = new THREE.FogExp2(L.fog, 0.008);
     ambient.color.set(L.sky);
-    sun.color.set(level === 1 ? 0xff8844 : level === 2 ? 0xccddff : level === 3 ? 0x88aa88 : 0xfff4e0);
-    baseSunIntensity = level === 3 ? 0.6 : 1.2;
-    baseAmbientIntensity = level === 3 ? 0.35 : 0.7;
+    sun.color.set(level === 1 ? 0xff8844 : level === 2 ? 0xccddff : level === 3 ? 0x88aa88 : level === 4 ? 0xffaa66 : 0xfff4e0);
+    baseSunIntensity = level === 3 ? 0.6 : level === 4 ? 1.0 : 1.2;
+    baseAmbientIntensity = level === 3 ? 0.35 : level === 4 ? 0.6 : 0.7;
 
-    const size = 120;
+    const size = level === 4 ? 80 : 120;
     const geo = new THREE.PlaneGeometry(size, size, 80, 80);
     geo.rotateX(-Math.PI / 2);
     const verts = geo.attributes.position;
@@ -653,6 +1111,30 @@ function createIsland(level) {
     }));
     oceanMesh.position.y = -0.5;
     scene.add(oceanMesh);
+
+    // Sky Kingdom clouds below the island
+    if (level === 4) {
+        for (let i = 0; i < 30; i++) {
+            const cloudGroup = new THREE.Group();
+            const numSpheres = 3 + Math.floor(Math.random() * 4);
+            for (let s = 0; s < numSpheres; s++) {
+                const r = 2 + Math.random() * 3;
+                const sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(r, 8, 8),
+                    new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 + Math.random() * 0.2 })
+                );
+                sphere.position.set((Math.random()-0.5)*4, (Math.random()-0.5)*1.5, (Math.random()-0.5)*4);
+                cloudGroup.add(sphere);
+            }
+            cloudGroup.position.set(
+                (Math.random()-0.5) * 120,
+                -5 - Math.random() * 5,
+                (Math.random()-0.5) * 120
+            );
+            scene.add(cloudGroup);
+            skyKingdomClouds.push(cloudGroup);
+        }
+    }
 }
 
 // === PALM TREES ===
@@ -970,6 +1452,156 @@ function createBoulder(x, z) {
     enemies.push(boulder);
 }
 
+// === BIRD ENEMIES (Sky Kingdom) ===
+function createBird(x, z) {
+    const group = new THREE.Group();
+    // Body
+    const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 8, 8),
+        new THREE.MeshPhongMaterial({ color: 0x9944cc, flatShading: true })
+    );
+    body.scale.set(1, 0.7, 1.2);
+    body.castShadow = true;
+    group.add(body);
+    // Eyes
+    [-0.12, 0.12].forEach(side => {
+        const eye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0xff4400 })
+        );
+        eye.position.set(side, 0.12, 0.25);
+        group.add(eye);
+        const pupil = new THREE.Mesh(
+            new THREE.SphereGeometry(0.03, 4, 4),
+            new THREE.MeshPhongMaterial({ color: 0x111111 })
+        );
+        pupil.position.set(side, 0.12, 0.3);
+        group.add(pupil);
+    });
+    // Beak
+    const beak = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08, 0.2, 4),
+        new THREE.MeshPhongMaterial({ color: 0xff8800 })
+    );
+    beak.position.set(0, 0.05, 0.38);
+    beak.rotation.x = Math.PI / 2;
+    group.add(beak);
+    // Wings
+    [-0.4, 0.4].forEach((side, i) => {
+        const wing = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.6, 0.3),
+            new THREE.MeshPhongMaterial({ color: 0xbb66ee, side: THREE.DoubleSide })
+        );
+        wing.position.set(side, 0.1, 0);
+        wing.rotation.z = side > 0 ? -0.3 : 0.3;
+        wing.userData = { isWing: true, side: i };
+        group.add(wing);
+    });
+    // Tail
+    const tail = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.3, 4),
+        new THREE.MeshPhongMaterial({ color: 0x7733aa })
+    );
+    tail.position.set(0, 0.05, -0.35);
+    tail.rotation.x = -0.3;
+    group.add(tail);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y + 2, z);
+    group.userData = {
+        alive: true, type: 'bird',
+        originX: x, originZ: z,
+        angle: Math.random() * Math.PI * 2,
+        speed: 0.02 + Math.random() * 0.01,
+        radius: 4 + Math.random() * 5,
+        baseY: y + 2,
+        flyPhase: Math.random() * Math.PI * 2,
+    };
+    addObj(group);
+    enemies.push(group);
+}
+
+// === HAT PEDESTAL IN CAVES ===
+function createHatPedestal(x, z, hatType, level) {
+    // Check if already collected
+    try {
+        if (localStorage.getItem('kk_hat_' + hatType) === '1') return;
+    } catch(e) {}
+
+    const group = new THREE.Group();
+    // Pedestal (cylinder)
+    const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.35, 0.6, 8),
+        new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 80 })
+    );
+    pedestal.position.y = 0.3;
+    pedestal.castShadow = true;
+    group.add(pedestal);
+
+    // Hat mesh on top
+    const hatGroup = new THREE.Group();
+    if (hatType === 'pirate') {
+        const brim = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.4, 0.03, 12),
+            new THREE.MeshPhongMaterial({ color: 0x222222 })
+        );
+        hatGroup.add(brim);
+        const top = new THREE.Mesh(
+            new THREE.ConeGeometry(0.3, 0.2, 8),
+            new THREE.MeshPhongMaterial({ color: 0x222222 })
+        );
+        top.position.y = 0.12;
+        hatGroup.add(top);
+    } else if (hatType === 'crown') {
+        const base = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.2, 0.2, 0.15, 8),
+            new THREE.MeshPhongMaterial({ color: 0xffd700, shininess: 100 })
+        );
+        hatGroup.add(base);
+        for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2;
+            const spike = new THREE.Mesh(
+                new THREE.ConeGeometry(0.04, 0.1, 4),
+                new THREE.MeshPhongMaterial({ color: 0xffd700 })
+            );
+            spike.position.set(Math.cos(a) * 0.15, 0.12, Math.sin(a) * 0.15);
+            hatGroup.add(spike);
+        }
+    } else if (hatType === 'santa') {
+        const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(0.25, 0.35, 8),
+            new THREE.MeshPhongMaterial({ color: 0xcc0000 })
+        );
+        cone.position.y = 0.15;
+        hatGroup.add(cone);
+        const brim = new THREE.Mesh(
+            new THREE.TorusGeometry(0.22, 0.04, 6, 12),
+            new THREE.MeshPhongMaterial({ color: 0xffffff })
+        );
+        brim.rotation.x = Math.PI / 2;
+        hatGroup.add(brim);
+        const pomPom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0xffffff })
+        );
+        pomPom.position.y = 0.32;
+        hatGroup.add(pomPom);
+    }
+    hatGroup.position.y = 0.7;
+    group.add(hatGroup);
+
+    // Glow light
+    const glow = new THREE.PointLight(0xffd700, 1.5, 4);
+    glow.position.y = 1;
+    group.add(glow);
+
+    const y = getTerrainHeight(x, z);
+    group.position.set(x, y, z);
+    group.userData = { hatType: hatType, collected: false };
+    addObj(group);
+    hatPedestals.push(group);
+}
+
 // === SANTA CLAUS NPC ===
 function createSantaModel() {
     const group = new THREE.Group();
@@ -1160,6 +1792,7 @@ function updateSanta(t60) {
         spawnParticles(g.position.clone().add(new THREE.Vector3(0,1,0)), 0x00ff00, 10, 0.4);
         updateHUD();
         triggerFruitPop();
+        unlockAchievement('santasHelper');
         scene.remove(santaNPC.group);
         santaNPC = null;
         if (state.collected >= LEVELS[state.level].fruits) winLevel();
@@ -1253,6 +1886,9 @@ function createWeatherSystem(level) {
         count = 120; color = 0xffffff; size = 0.05; speed = -0.02; spread = 80;
     } else if (level === 3) {
         count = 150; color = 0x6688bb; size = 0.02; speed = -0.15; spread = 80;
+    } else if (level === 4) {
+        // Sky Kingdom: slow floating golden sparkles rising upward
+        count = 60; color = 0xffcc44; size = 0.03; speed = 0.01; spread = 60;
     } else {
         return;
     }
@@ -1582,6 +2218,7 @@ function updateChickens(t60) {
                     dz / len + (Math.random() - 0.5) * 0.8
                 ).normalize();
                 sfxChickenCluck();
+                { const cnt = incrementCounter('kk_chickensScattered'); if (cnt >= 20) unlockAchievement('chickenChaser'); }
             } else {
                 // Wander
                 ud.wanderTimer -= t60;
@@ -1880,6 +2517,7 @@ function updateUFO(t60) {
             spawnParticles(state.pos.clone().add(new THREE.Vector3(0, 2, 0)), 0x00ff44, 20, 0.5);
             triggerFruitPop();
             updateHUD();
+            unlockAchievement('ufoBeliever');
             state.ufoBeamTimer = -600; // prevent re-triggering for 10 seconds
             if (state.collected >= LEVELS[state.level].fruits) winLevel();
         }
@@ -2329,6 +2967,136 @@ function showUnlockNotify(text) {
 }
 
 
+// === PHOTO MODE ===
+function togglePhotoMode() {
+    photoMode = !photoMode;
+    if (photoMode) {
+        // Enter photo mode
+        photoCamPos.copy(camera.position);
+        photoCamYaw = state.yaw;
+        photoCamPitch = state.pitch;
+        document.getElementById('photo-mode-overlay').style.display = 'block';
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('minimap').style.display = 'none';
+        document.getElementById('compass').style.display = 'none';
+        document.getElementById('spin-indicator').style.display = 'none';
+        if (!isTouchDevice) {
+            try { document.exitPointerLock(); } catch(e) {}
+        }
+    } else {
+        // Exit photo mode
+        document.getElementById('photo-mode-overlay').style.display = 'none';
+        document.getElementById('hud').style.display = 'flex';
+        document.getElementById('minimap').style.display = 'block';
+        document.getElementById('compass').style.display = 'block';
+        document.getElementById('spin-indicator').style.display = 'block';
+        if (!isTouchDevice) renderer.domElement.requestPointerLock();
+        lastTime = performance.now();
+    }
+}
+
+// === HAT MESH SYSTEM ===
+function createHatMesh(hatName) {
+    const g = new THREE.Group();
+    if (hatName === 'pirate') {
+        const brim = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.4, 0.03, 12),
+            new THREE.MeshPhongMaterial({ color: 0x222222 })
+        );
+        g.add(brim);
+        const top = new THREE.Mesh(
+            new THREE.ConeGeometry(0.3, 0.2, 8),
+            new THREE.MeshPhongMaterial({ color: 0x222222 })
+        );
+        top.position.y = 0.12;
+        g.add(top);
+    } else if (hatName === 'crown') {
+        const base = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.2, 0.2, 0.15, 8),
+            new THREE.MeshPhongMaterial({ color: 0xffd700, shininess: 100 })
+        );
+        g.add(base);
+        for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2;
+            const spike = new THREE.Mesh(
+                new THREE.ConeGeometry(0.04, 0.1, 4),
+                new THREE.MeshPhongMaterial({ color: 0xffd700 })
+            );
+            spike.position.set(Math.cos(a) * 0.15, 0.12, Math.sin(a) * 0.15);
+            g.add(spike);
+        }
+    } else if (hatName === 'santa') {
+        const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(0.25, 0.35, 8),
+            new THREE.MeshPhongMaterial({ color: 0xcc0000 })
+        );
+        cone.position.y = 0.15;
+        g.add(cone);
+        const brim = new THREE.Mesh(
+            new THREE.TorusGeometry(0.22, 0.04, 6, 12),
+            new THREE.MeshPhongMaterial({ color: 0xffffff })
+        );
+        brim.rotation.x = Math.PI / 2;
+        g.add(brim);
+        const pomPom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 6, 6),
+            new THREE.MeshPhongMaterial({ color: 0xffffff })
+        );
+        pomPom.position.y = 0.32;
+        g.add(pomPom);
+    }
+    return g;
+}
+
+function updatePlayerHat() {
+    // Remove old hat
+    if (hatMeshGroup) {
+        player.remove(hatMeshGroup);
+        hatMeshGroup = null;
+    }
+    if (activeHat === 'none') return;
+    hatMeshGroup = createHatMesh(activeHat);
+    // Position above the top hair (topHair is at y=1.6)
+    hatMeshGroup.position.y = 1.85;
+    player.add(hatMeshGroup);
+}
+
+function updateHatButtons() {
+    const btns = document.querySelectorAll('#hat-options .hat-btn');
+    btns.forEach(btn => {
+        const hat = btn.dataset.hat;
+        if (hat === 'none') {
+            btn.classList.toggle('active', activeHat === 'none');
+            btn.classList.remove('locked');
+        } else {
+            const unlocked = collectedHats[hat];
+            btn.classList.toggle('locked', !unlocked);
+            btn.classList.toggle('active', activeHat === hat);
+        }
+    });
+}
+
+// Hat button click handlers
+document.getElementById('hat-options').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const btn = e.target.closest('.hat-btn');
+    if (!btn) return;
+    const hat = btn.dataset.hat;
+    if (hat === 'none') {
+        activeHat = 'none';
+    } else if (collectedHats[hat]) {
+        activeHat = hat;
+    } else {
+        return; // locked
+    }
+    try { localStorage.setItem('kk_activeHat', activeHat); } catch(e2) {}
+    updatePlayerHat();
+    updateHatButtons();
+});
+
+// Initialize hat buttons on load
+updateHatButtons();
+
 // === PLAYER ===
 function createPlayer() {
     const group = new THREE.Group();
@@ -2500,12 +3268,18 @@ function buildLevel(levelIdx) {
     // Enemies
     placed=0; attempts=0;
     while (placed<L.enemies && attempts<300) {
-        const a=Math.random()*Math.PI*2, r=10+Math.random()*30;
+        const a=Math.random()*Math.PI*2, r=10+Math.random()*(levelIdx===4?20:30);
         const x=Math.cos(a)*r, z=Math.sin(a)*r;
         const h=getTerrainHeight(x,z);
-        if (h>1&&h<7) {
-            if (Math.random()>0.4) createCrab(x,z);
-            else createBoulder(x,z);
+        if (h>1&&h<(levelIdx===4?10:7)) {
+            if (levelIdx === 4) {
+                // Sky Kingdom: birds and crabs
+                if (Math.random() > 0.4) createBird(x, z);
+                else createCrab(x, z);
+            } else {
+                if (Math.random()>0.4) createCrab(x,z);
+                else createBoulder(x,z);
+            }
             placed++;
         }
         attempts++;
@@ -2524,18 +3298,30 @@ function buildLevel(levelIdx) {
     createWeatherSystem(levelIdx);
 
     // Cave entrances
+    const cavePositions = [];
     for (let i = 0; i < 2; i++) {
         const a = (i / 2) * Math.PI * 2 + Math.random() * 1.0 + 0.5;
         const r = 18 + Math.random() * 12;
         const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
         createCaveEntrance(cx, cz, levelIdx);
+        cavePositions.push({ x: cx, z: cz, rot: Math.atan2(-cx, -cz) });
+    }
+
+    // Hat pedestals inside first cave of specific levels
+    const hatLevelMap = { 0: 'pirate', 1: 'crown', 2: 'santa' };
+    if (hatLevelMap[levelIdx] && cavePositions.length > 0) {
+        const cave = cavePositions[0];
+        const fwd = new THREE.Vector3(-Math.sin(cave.rot), 0, -Math.cos(cave.rot));
+        const hx = cave.x + fwd.x * 2.5;
+        const hz = cave.z + fwd.z * 2.5;
+        createHatPedestal(hx, hz, hatLevelMap[levelIdx], levelIdx);
     }
 
     // Blob shadow
     createBlobShadow();
 
     // Reset day/night
-    dayNightTime = levelIdx === 3 ? Math.PI * 0.8 : 0;
+    dayNightTime = levelIdx === 3 ? Math.PI * 0.8 : levelIdx === 4 ? Math.PI * 0.4 : 0;
 
     // ========= NEW FEATURES =========
 
@@ -2630,6 +3416,9 @@ function buildLevel(levelIdx) {
 
     // Double jump availability
     state.canDoubleJump = levelIdx >= 1;
+
+    // Apply hat
+    updatePlayerHat();
 }
 
 // === MINIMAP ===
@@ -2815,6 +3604,11 @@ function showStars(stars) {
 
 // === GAME FLOW ===
 function resetPlayerState() {
+    // Exit photo mode if active
+    if (photoMode) {
+        photoMode = false;
+        document.getElementById('photo-mode-overlay').style.display = 'none';
+    }
     state.pos.set(0, 5, 0);
     state.vel.set(0, 0, 0);
     state.yaw = 0; state.pitch = 0;
@@ -2858,7 +3652,7 @@ function startLevel(levelIdx) {
     document.getElementById('minimap').style.display = 'block';
     document.getElementById('compass').style.display = 'block';
     document.getElementById('spin-indicator').style.display = 'block';
-    document.getElementById('hud-level').textContent = `Level ${levelIdx+1}: ${LEVELS[levelIdx].name}`;
+    document.getElementById('hud-level').textContent = levelIdx === 4 ? `Secret: ${LEVELS[levelIdx].name}` : `Level ${levelIdx+1}: ${LEVELS[levelIdx].name}`;
 
     const best = getBestTime(levelIdx);
     const bestEl = document.getElementById('hud-best');
@@ -2869,13 +3663,31 @@ function startLevel(levelIdx) {
         bestEl.style.display = 'none';
     }
 
-    renderer.domElement.requestPointerLock();
+    if (!isTouchDevice) renderer.domElement.requestPointerLock();
     startMusic();
     updateHUD();
+
+    // Show/hide mobile controls when game starts
+    if (isTouchDevice) {
+        document.getElementById('mobile-joystick').style.display = 'block';
+        document.getElementById('mobile-btn-jump').style.display = 'block';
+        document.getElementById('mobile-btn-spin').style.display = 'block';
+        document.getElementById('mobile-btn-pound').style.display = 'block';
+    }
 
     // Show double jump unlock notification
     if (levelIdx === 1) {
         setTimeout(() => showUnlockNotify('DOUBLE JUMP UNLOCKED!'), 500);
+    }
+
+    // Tutorial popups (first 45s of Level 1 only)
+    if (levelIdx === 0 && !tutorialShown) {
+        tutorialActive = true;
+        tutorialTimer = 0;
+        const el = document.getElementById('tutorial-popup');
+        el.textContent = isTouchDevice ? "Use the joystick!" : "Use WASD to move!";
+        el.style.display = 'block';
+        requestAnimationFrame(() => el.classList.add('show'));
     }
 }
 
@@ -2883,7 +3695,15 @@ function winLevel() {
     state.won = true;
     sfxWin();
     startFireworks(); // NEW: fireworks on level complete
-    document.exitPointerLock();
+    if (!isTouchDevice) document.exitPointerLock();
+    // Hide mobile controls on win
+    if (isTouchDevice) {
+        document.getElementById('mobile-joystick').style.display = 'none';
+        document.getElementById('mobile-btn-jump').style.display = 'none';
+        document.getElementById('mobile-btn-spin').style.display = 'none';
+        document.getElementById('mobile-btn-pound').style.display = 'none';
+        document.getElementById('mobile-btn-interact').style.display = 'none';
+    }
     const time = ((performance.now() - state.startTime)/1000).toFixed(1);
     const timeNum = parseFloat(time);
     state.totalTime += timeNum;
@@ -2891,17 +3711,68 @@ function winLevel() {
     const stars = getStarRating(state.level, timeNum);
     showStars(stars);
 
+    // Achievement checks on level win
+    if (stars >= 3) unlockAchievement('speedDemon');
+    // Track completed levels for islandMaster
+    try {
+        const completedLevels = JSON.parse(localStorage.getItem('kk_completedLevels') || '{}');
+        if (state.level <= 3) completedLevels[state.level] = true;
+        localStorage.setItem('kk_completedLevels', JSON.stringify(completedLevels));
+        if (completedLevels[0] && completedLevels[1] && completedLevels[2] && completedLevels[3]) unlockAchievement('islandMaster');
+    } catch(e) {}
+    if (state.level === 4) unlockAchievement('trueChampion');
+
+    // Show share score button
+    document.getElementById('share-score-btn').style.display = 'inline-block';
+
     const prevBest = getBestTime(state.level);
     const isNewBest = prevBest === null || timeNum < prevBest;
     if (isNewBest) setBestTime(state.level, timeNum);
     document.getElementById('win-new-best').style.display = isNewBest ? 'block' : 'none';
 
-    if (state.level < LEVELS.length - 1) {
+    const secretMsg = document.getElementById('secret-level-msg');
+    if (state.level === 3) {
+        // Level 4 win - check golden wumpa status for secret level
+        const allGolden = checkAllGoldenComplete();
+        if (allGolden) {
+            secretMsg.style.display = 'block';
+            secretMsg.style.color = '#ffd700';
+            secretMsg.textContent = 'SECRET LEVEL UNLOCKED!';
+        } else {
+            secretMsg.style.display = 'block';
+            secretMsg.style.color = '#888';
+            secretMsg.textContent = 'Collect all Golden Wumpa to unlock the secret level!';
+        }
+    } else if (state.level === 4) {
+        // Secret level complete
+        secretMsg.style.display = 'none';
+    } else {
+        secretMsg.style.display = 'none';
+    }
+
+    if (state.level === 4) {
+        // Secret level completion
+        document.getElementById('win-stats').textContent =
+            `GAME COMPLETE! You are the true Kakkad Champion!`;
+        document.getElementById('win-overlay').querySelector('h1').textContent = 'GAME COMPLETE!';
+        // All gold stars
+        const starContainer = document.getElementById('win-stars');
+        const starEls = starContainer.querySelectorAll('.star');
+        starEls.forEach(el => { el.className = 'star gold'; });
+        document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK TO PLAY AGAIN';
+    } else if (state.level < LEVELS.length - 1) {
         document.getElementById('win-stats').textContent =
             `All ${LEVELS[state.level].fruits} Wumpa Fruit collected in ${time}s!` +
             (prevBest !== null ? ` (Best: ${isNewBest ? time : prevBest}s)` : '');
         document.getElementById('win-overlay').querySelector('h1').textContent = 'ISLAND COMPLETE!';
-        document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK FOR NEXT ISLAND';
+        // If this is level 3 and secret level is unlocked, say so
+        if (state.level === 3 && checkAllGoldenComplete()) {
+            document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK FOR SECRET LEVEL';
+        } else if (state.level === 3 && !checkAllGoldenComplete()) {
+            document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK TO PLAY AGAIN';
+        } else {
+            document.getElementById('win-overlay').querySelector('.start-msg').textContent = 'CLICK FOR NEXT ISLAND';
+        }
     } else {
         document.getElementById('win-stats').textContent =
             `All islands cleared! Total: ${state.totalTime.toFixed(1)}s`;
@@ -2912,7 +3783,27 @@ function winLevel() {
 }
 
 function nextLevel() {
-    if (state.level < LEVELS.length - 1) {
+    // Level 3 (index 3) -> check if secret level unlocked
+    if (state.level === 3 && checkAllGoldenComplete()) {
+        // Go to secret level 4
+        const next = 4;
+        document.getElementById('level-title').textContent = 'SECRET LEVEL';
+        document.getElementById('level-theme').textContent = LEVELS[next].name;
+        document.getElementById('win-overlay').style.display = 'none';
+        document.getElementById('level-overlay').style.display = 'flex';
+    } else if (state.level === 3 && !checkAllGoldenComplete()) {
+        // No secret level, restart
+        state.totalTime = 0;
+        state.level = 0;
+        document.getElementById('win-overlay').style.display = 'none';
+        startLevel(0);
+    } else if (state.level === 4) {
+        // Secret level done, restart
+        state.totalTime = 0;
+        state.level = 0;
+        document.getElementById('win-overlay').style.display = 'none';
+        startLevel(0);
+    } else if (state.level < 3) {
         const next = state.level + 1;
         document.getElementById('level-title').textContent = `Level ${next+1}`;
         document.getElementById('level-theme').textContent = LEVELS[next].name;
@@ -2958,6 +3849,7 @@ function updateDeathAnimation(t60) {
             state.vel.set(0, 0, 0);
             state.health = 3;
             updateHUD();
+            showDeathMessage();
         }
         const t = (state.deathTimer - 50) / 30;
         const s = Math.min(1.0, t);
@@ -2988,7 +3880,7 @@ const pwBtn = document.getElementById('pw-btn');
 const pwError = document.getElementById('pw-error-msg');
 const pwOverlay = document.getElementById('password-overlay');
 
-// Hide start overlay until password is entered
+// Hide start overlay until password is entered (password overlay is shown by loading screen)
 document.getElementById('start-overlay').style.display = 'none';
 
 function checkPassword() {
@@ -3012,12 +3904,23 @@ document.getElementById('start-overlay').addEventListener('click', () => {
 });
 document.getElementById('win-overlay').addEventListener('click', () => nextLevel());
 document.getElementById('level-overlay').addEventListener('click', () => {
-    startLevel(state.level + 1);
+    const nextIdx = state.level + 1;
+    if (nextIdx < LEVELS.length) {
+        startLevel(nextIdx);
+    } else {
+        startLevel(0);
+    }
 });
 document.addEventListener('pointerlockchange', () => {
-    if (!document.pointerLockElement && state.started && !state.won && !state.paused) {
+    if (!isTouchDevice && !document.pointerLockElement && state.started && !state.won && !state.paused && !photoMode) {
         renderer.domElement.addEventListener('click', () => {
-            if (state.started && !state.won && !state.paused) renderer.domElement.requestPointerLock();
+            if (state.started && !state.won && !state.paused && !photoMode) renderer.domElement.requestPointerLock();
+        }, { once: true });
+    }
+    // In photo mode, re-request pointer lock on click for camera control
+    if (!isTouchDevice && !document.pointerLockElement && photoMode) {
+        renderer.domElement.addEventListener('click', () => {
+            if (photoMode) renderer.domElement.requestPointerLock();
         }, { once: true });
     }
 });
@@ -3062,8 +3965,37 @@ const _camTarget = new THREE.Vector3();
 const _camLookTarget = new THREE.Vector3();
 const _spinOff = new THREE.Vector3(0, 0.8, 0);
 
+function updatePhotoModeCamera(dt) {
+    const speed = 0.15 * dt * 60;
+    // Use mouse for rotation
+    photoCamYaw -= mouseDX * MOUSE_SENS;
+    photoCamPitch -= mouseDY * MOUSE_SENS;
+    photoCamPitch = Math.max(-1.4, Math.min(1.4, photoCamPitch));
+    mouseDX = 0; mouseDY = 0;
+
+    // Calculate forward/right vectors for free camera
+    const fwdX = -Math.sin(photoCamYaw) * Math.cos(photoCamPitch);
+    const fwdY = Math.sin(photoCamPitch);
+    const fwdZ = -Math.cos(photoCamYaw) * Math.cos(photoCamPitch);
+    const rgtX = Math.cos(photoCamYaw);
+    const rgtZ = -Math.sin(photoCamYaw);
+
+    if (keys['KeyW']) { photoCamPos.x += fwdX * speed; photoCamPos.y += fwdY * speed; photoCamPos.z += fwdZ * speed; }
+    if (keys['KeyS']) { photoCamPos.x -= fwdX * speed; photoCamPos.y -= fwdY * speed; photoCamPos.z -= fwdZ * speed; }
+    if (keys['KeyA']) { photoCamPos.x -= rgtX * speed; photoCamPos.z -= rgtZ * speed; }
+    if (keys['KeyD']) { photoCamPos.x += rgtX * speed; photoCamPos.z += rgtZ * speed; }
+
+    camera.position.copy(photoCamPos);
+    camera.lookAt(
+        photoCamPos.x + fwdX * 10,
+        photoCamPos.y + fwdY * 10,
+        photoCamPos.z + fwdZ * 10
+    );
+}
+
 function update(dt) {
     if (!state.started || state.paused) return;
+    if (photoMode) return; // freeze game in photo mode
 
     // Continue fireworks even when won
     updateFireworks(dt * 60);
@@ -3400,6 +4332,7 @@ function update(dt) {
                 state.onSurfboard = true;
                 surfboard.visible = true;
                 sfxSurfboard();
+                unlockAchievement('surfsUp');
             }
         }
 
@@ -3465,6 +4398,7 @@ function update(dt) {
                     e.visible = false;
                     sfxEnemy();
                     spawnParticles(e.position, e.userData.type==='crab'?0xcc3333:0x666655, 10);
+                    { const cnt = incrementCounter('kk_gpKills'); if (cnt >= 5) unlockAchievement('groundPounder'); }
                 }
             }
             // Break crates in radius 3
@@ -3479,6 +4413,7 @@ function update(dt) {
                     state.collected = Math.min(state.collected + 2, LEVELS[state.level].fruits);
                     triggerFruitPop();
                     updateHUD();
+                    { const cnt = incrementCounter('kk_cratesSmashed'); if (cnt >= 10) unlockAchievement('crateSmasher'); }
                     if (state.collected >= LEVELS[state.level].fruits) winLevel();
                 }
             }
@@ -3583,6 +4518,7 @@ function update(dt) {
             spawnParticles(f.position, 0xff6600, 8);
             triggerFruitPop();
             updateHUD();
+            unlockAchievement('firstFruit');
             if (state.collected >= LEVELS[state.level].fruits) winLevel();
         }
     }
@@ -3598,6 +4534,12 @@ function update(dt) {
             spawnParticles(gw.position, 0xffd700, 20, 0.5);
             triggerFruitPop();
             updateHUD();
+            // Track golden wumpa per level
+            levelGoldenCollected++;
+            if (levelGoldenCollected >= levelGoldenTotal && state.level <= 3) {
+                try { localStorage.setItem('kk_goldenL' + state.level, '1'); } catch(e) {}
+                if (checkAllGoldenComplete()) markGoldenComplete();
+            }
             if (state.collected >= LEVELS[state.level].fruits) winLevel();
         }
     }
@@ -3633,6 +4575,23 @@ function update(dt) {
         }
     }
 
+    // Hat pedestals
+    for (const hp of hatPedestals) {
+        if (hp.userData.collected) continue;
+        if (_pPos.distanceTo(hp.position) < 1.5) {
+            hp.userData.collected = true;
+            hp.visible = false;
+            const ht = hp.userData.hatType;
+            collectedHats[ht] = true;
+            try { localStorage.setItem('kk_hat_' + ht, '1'); } catch(e) {}
+            const nameMap = { pirate: 'PIRATE HAT', crown: 'CROWN', santa: 'SANTA HAT' };
+            showUnlockNotify(nameMap[ht] + ' UNLOCKED!');
+            spawnParticles(hp.position.clone().add(new THREE.Vector3(0, 1, 0)), 0xffd700, 15, 0.5);
+            updateHatButtons();
+            if (collectedHats.pirate && collectedHats.crown && collectedHats.santa) unlockAchievement('hatCollector');
+        }
+    }
+
     // Crates
     for (const c of crates) {
         if (c.userData.broken) continue;
@@ -3647,6 +4606,7 @@ function update(dt) {
                 state.collected = Math.min(state.collected + 2, LEVELS[state.level].fruits);
                 triggerFruitPop();
                 updateHUD();
+                { const cnt = incrementCounter('kk_cratesSmashed'); if (cnt >= 10) unlockAchievement('crateSmasher'); }
                 if (state.collected >= LEVELS[state.level].fruits) winLevel();
             } else if (d < 0.9) {
                 _pushDir.copy(state.pos).sub(c.position).normalize();
@@ -3666,7 +4626,20 @@ function update(dt) {
             e.userData._hc = getTerrainHeight(nx, nz);
             e.userData._ht = animTime;
         }
-        e.position.set(nx, e.userData._hc + (e.userData.type==='crab'?0.2:0.6), nz);
+        if (e.userData.type === 'bird') {
+            const birdBaseY = e.userData._hc + 2;
+            e.position.set(nx, birdBaseY + Math.sin(animTime * 0.04 + e.userData.flyPhase) * 2, nz);
+            e.rotation.y = e.userData.angle + Math.PI/2;
+            // Wing flap
+            e.children.forEach(c => {
+                if (c.userData.isWing) {
+                    const flap = Math.sin(animTime * 0.15 + c.userData.side * Math.PI) * 0.5;
+                    c.rotation.z = c.userData.side === 0 ? -0.3 + flap : 0.3 - flap;
+                }
+            });
+        } else {
+            e.position.set(nx, e.userData._hc + (e.userData.type==='crab'?0.2:0.6), nz);
+        }
         if (e.userData.type==='boulder') e.rotation.x += 0.05 * t60;
         if (e.userData.type==='crab') e.rotation.y = e.userData.angle + Math.PI/2;
 
@@ -3757,6 +4730,18 @@ function update(dt) {
     updateGoldenWumpaSparkles(t60, animTime);
     updateGlassDome(t60, animTime);
     if (state.level === 2) updateNorthernLights(t60, animTime);
+    // Sky Kingdom cloud drift
+    if (state.level === 4) {
+        skyKingdomClouds.forEach((c, i) => {
+            c.position.x += Math.sin(animTime * 0.001 + i) * 0.005 * t60;
+            c.position.z += Math.cos(animTime * 0.001 + i * 0.7) * 0.003 * t60;
+        });
+    }
+    // Animate hat pedestals (bob + rotate)
+    hatPedestals.forEach(hp => {
+        if (hp.userData.collected) return;
+        hp.children[1].rotation.y += 0.03 * t60; // hat group rotation
+    });
 
     // HUD
     updateHUD();
@@ -3788,17 +4773,445 @@ function updateGoldenWumpaSparkles(t60, animTime) {
     });
 }
 
+// ========================================
+// BATCH 1 NEW FEATURES
+// ========================================
+
+// === DEATH MESSAGES ===
+function showDeathMessage() {
+    const msg = DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)];
+    const el = document.getElementById('death-message');
+    el.textContent = msg;
+    el.style.display = 'block';
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => { el.style.display = 'none'; }, 300);
+    }, 2000);
+}
+
+// === TUTORIAL POPUPS ===
+function getTutorialMessage(t) {
+    if (t < 5) return isTouchDevice ? "Use the joystick!" : "Use WASD to move!";
+    if (t < 15) return "Collect the orange Wumpa Fruit!";
+    if (t < 25) return isTouchDevice ? "Tap B to Spin Attack!" : "Left Click to Spin Attack!";
+    if (t < 35) return "Golden Wumpa on hilltops = 10pts!";
+    if (t < 45) return "Watch out for crabs and boulders!";
+    return null;
+}
+
+function updateTutorial(dt) {
+    if (!tutorialActive) return;
+    tutorialTimer += dt;
+    const el = document.getElementById('tutorial-popup');
+    const msg = getTutorialMessage(tutorialTimer);
+    if (msg === null) {
+        // Tutorial done
+        tutorialActive = false;
+        el.classList.remove('show');
+        setTimeout(() => { el.style.display = 'none'; }, 500);
+        try { localStorage.setItem('kk_tutorialShown', '1'); } catch(e) {}
+        return;
+    }
+    if (el.textContent !== msg) {
+        // Fade out old, swap, fade in
+        el.classList.remove('show');
+        setTimeout(() => {
+            el.textContent = msg;
+            el.style.display = 'block';
+            requestAnimationFrame(() => el.classList.add('show'));
+        }, 200);
+    }
+}
+
+// === FPS COUNTER ===
+function updateFPSCounter() {
+    if (!fpsVisible) return;
+    fpsFrames++;
+    const now = performance.now();
+    if (now - fpsLastTime >= 1000) {
+        fpsDisplay = fpsFrames;
+        fpsFrames = 0;
+        fpsLastTime = now;
+        document.getElementById('fps-counter').textContent = fpsDisplay + ' FPS';
+    }
+}
+
+// === MOBILE/TOUCH CONTROLS ===
+function setupMobileControls() {
+    if (!isTouchDevice) return;
+
+    // Show mobile controls
+    document.getElementById('mobile-joystick').style.display = 'block';
+    document.getElementById('mobile-btn-jump').style.display = 'block';
+    document.getElementById('mobile-btn-spin').style.display = 'block';
+    document.getElementById('mobile-btn-pound').style.display = 'block';
+    // Move minimap up to avoid overlap
+    document.getElementById('minimap').style.bottom = '190px';
+    // Move compass up
+    document.getElementById('compass').style.bottom = '190px';
+
+    const joystickEl = document.getElementById('mobile-joystick');
+    const thumbEl = document.getElementById('joystick-thumb');
+    let joystickTouchId = null;
+    const joystickCenterX = 60, joystickCenterY = 60;
+    const joystickMaxDist = 45;
+
+    joystickEl.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        joystickTouchId = t.identifier;
+        mobileJoystickActive = true;
+    }, { passive: false });
+
+    joystickEl.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+            if (t.identifier === joystickTouchId) {
+                const rect = joystickEl.getBoundingClientRect();
+                let dx = t.clientX - (rect.left + joystickCenterX);
+                let dy = t.clientY - (rect.top + joystickCenterY);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > joystickMaxDist) {
+                    dx = dx / dist * joystickMaxDist;
+                    dy = dy / dist * joystickMaxDist;
+                }
+                thumbEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                mobileJoystickX = dx / joystickMaxDist;
+                mobileJoystickY = dy / joystickMaxDist;
+            }
+        }
+    }, { passive: false });
+
+    const resetJoystick = e => {
+        for (const t of e.changedTouches) {
+            if (t.identifier === joystickTouchId) {
+                joystickTouchId = null;
+                mobileJoystickActive = false;
+                mobileJoystickX = 0;
+                mobileJoystickY = 0;
+                thumbEl.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+    };
+    joystickEl.addEventListener('touchend', resetJoystick, { passive: false });
+    joystickEl.addEventListener('touchcancel', resetJoystick, { passive: false });
+
+    // Action buttons
+    document.getElementById('mobile-btn-jump').addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys['Space'] = true;
+        setTimeout(() => { keys['Space'] = false; }, 100);
+    }, { passive: false });
+
+    document.getElementById('mobile-btn-spin').addEventListener('touchstart', e => {
+        e.preventDefault();
+        mouseClicked = true;
+    }, { passive: false });
+
+    document.getElementById('mobile-btn-pound').addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys['KeyC'] = true;
+        setTimeout(() => { keys['KeyC'] = false; }, 100);
+    }, { passive: false });
+
+    document.getElementById('mobile-btn-interact').addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys['KeyE'] = true;
+        setTimeout(() => { keys['KeyE'] = false; }, 100);
+    }, { passive: false });
+
+    // Camera touch (upper half of screen)
+    const canvas = renderer.domElement;
+    canvas.addEventListener('touchstart', e => {
+        for (const t of e.changedTouches) {
+            // Only upper half for camera look
+            if (t.clientY < window.innerHeight * 0.5 && mobileCameraTouchId === null) {
+                mobileCameraTouchId = t.identifier;
+                mobileCameraLastX = t.clientX;
+                mobileCameraLastY = t.clientY;
+            }
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', e => {
+        for (const t of e.changedTouches) {
+            if (t.identifier === mobileCameraTouchId) {
+                const dx = t.clientX - mobileCameraLastX;
+                const dy = t.clientY - mobileCameraLastY;
+                mouseDX += dx * 1.5;
+                mouseDY += dy * 1.5;
+                mobileCameraLastX = t.clientX;
+                mobileCameraLastY = t.clientY;
+            }
+        }
+    }, { passive: true });
+
+    const resetCamera = e => {
+        for (const t of e.changedTouches) {
+            if (t.identifier === mobileCameraTouchId) {
+                mobileCameraTouchId = null;
+            }
+        }
+    };
+    canvas.addEventListener('touchend', resetCamera, { passive: true });
+    canvas.addEventListener('touchcancel', resetCamera, { passive: true });
+}
+
+// Show/hide interact button based on proximity
+function updateMobileInteractButton() {
+    if (!isTouchDevice || !state.started || state.won || state.paused) return;
+    const interactBtn = document.getElementById('mobile-btn-interact');
+    let showInteract = false;
+
+    // Check zipline proximity
+    for (const zl of ziplines) {
+        if (state.pos.distanceTo(zl.startPos) < 3 || state.pos.distanceTo(zl.endPos) < 3) {
+            showInteract = true; break;
+        }
+    }
+    // Check surfboard proximity
+    if (!showInteract && surfboard && !state.onSurfboard) {
+        if (state.pos.distanceTo(surfboard.position) < 2) showInteract = true;
+    }
+    // Check treasure chest proximity
+    if (!showInteract && treasureChest && !treasureChest.userData.opened) {
+        const cp = state.pos.clone(); cp.y += 0.8;
+        if (cp.distanceTo(treasureChest.position) < 1.5) showInteract = true;
+    }
+
+    interactBtn.style.display = showInteract ? 'block' : 'none';
+}
+
+// Apply mobile joystick to movement keys
+function applyMobileJoystick() {
+    if (!isTouchDevice || !mobileJoystickActive) return;
+    // Map joystick to WASD keys
+    keys['KeyW'] = mobileJoystickY < -0.3;
+    keys['KeyS'] = mobileJoystickY > 0.3;
+    keys['KeyA'] = mobileJoystickX < -0.3;
+    keys['KeyD'] = mobileJoystickX > 0.3;
+    // Sprint if fully pushed
+    const dist = Math.sqrt(mobileJoystickX*mobileJoystickX + mobileJoystickY*mobileJoystickY);
+    keys['ShiftLeft'] = dist > 0.85;
+}
+
+function clearMobileKeys() {
+    if (!isTouchDevice || mobileJoystickActive) return;
+    // Only clear movement keys if joystick is not active
+    keys['KeyW'] = false; keys['KeyS'] = false;
+    keys['KeyA'] = false; keys['KeyD'] = false;
+    keys['ShiftLeft'] = false;
+}
+
+// ========================================
+// BATCH 3 FEATURES
+// ========================================
+
+// === ACHIEVEMENT SYSTEM ===
+const ACHIEVEMENTS = {
+    firstFruit:    { name: "First Fruit",     desc: "Collect your first Wumpa",         icon: "F" },
+    crateSmasher:  { name: "Crate Smasher",   desc: "Break 10 crates",                  icon: "C" },
+    chickenChaser: { name: "Chicken Chaser",  desc: "Scatter chickens 20 times",         icon: "K" },
+    speedDemon:    { name: "Speed Demon",     desc: "Get Gold on any level",             icon: "S" },
+    santasHelper:  { name: "Santa's Helper",  desc: "Touch Santa Claus",                 icon: "X" },
+    ufoBeliever:   { name: "UFO Believer",    desc: "Get beamed by the UFO",             icon: "U" },
+    surfsUp:       { name: "Surfs Up",        desc: "Ride the surfboard",                icon: "W" },
+    groundPounder: { name: "Ground Pounder",  desc: "Kill 5 enemies with ground pound",  icon: "G" },
+    hatCollector:  { name: "Hat Collector",    desc: "Collect all 3 hats",                icon: "H" },
+    islandMaster:  { name: "Island Master",   desc: "Complete all 4 main levels",        icon: "I" },
+    trueChampion:  { name: "True Champion",   desc: "Complete the secret 5th level",     icon: "T" },
+};
+
+function loadAchievements() {
+    try {
+        const raw = localStorage.getItem('kk_achievements');
+        return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+}
+function saveAchievements(achs) {
+    try { localStorage.setItem('kk_achievements', JSON.stringify(achs)); } catch(e) {}
+}
+function unlockAchievement(key) {
+    const achs = loadAchievements();
+    if (achs[key]) return; // already unlocked
+    achs[key] = true;
+    saveAchievements(achs);
+    showAchievementToast(key);
+}
+function showAchievementToast(key) {
+    const ach = ACHIEVEMENTS[key];
+    if (!ach) return;
+    const toast = document.getElementById('achievement-toast');
+    toast.querySelector('.ach-toast-icon').textContent = ach.icon;
+    toast.querySelector('.ach-toast-name').textContent = ach.name;
+    toast.querySelector('.ach-toast-desc').textContent = ach.desc;
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
+}
+
+function incrementCounter(key) {
+    try {
+        const val = parseInt(localStorage.getItem(key) || '0', 10);
+        localStorage.setItem(key, (val + 1).toString());
+        return val + 1;
+    } catch(e) { return 0; }
+}
+
+function getCounter(key) {
+    try { return parseInt(localStorage.getItem(key) || '0', 10); } catch(e) { return 0; }
+}
+
+// Achievement overlay
+function showAchievementOverlay() {
+    const overlay = document.getElementById('achievement-overlay');
+    const grid = document.getElementById('achievement-grid');
+    const achs = loadAchievements();
+    grid.innerHTML = '';
+    for (const [key, def] of Object.entries(ACHIEVEMENTS)) {
+        const unlocked = !!achs[key];
+        const card = document.createElement('div');
+        card.className = 'ach-card' + (unlocked ? ' unlocked' : '');
+        card.innerHTML =
+            '<div class="ach-icon">' + def.icon + '</div>' +
+            '<div class="ach-info"><div class="ach-info-name">' + def.name + '</div>' +
+            '<div class="ach-info-desc">' + def.desc + '</div></div>';
+        grid.appendChild(card);
+    }
+    overlay.style.display = 'flex';
+}
+function hideAchievementOverlay() {
+    document.getElementById('achievement-overlay').style.display = 'none';
+}
+document.getElementById('ach-close-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    hideAchievementOverlay();
+});
+document.getElementById('pause-achievements-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    showAchievementOverlay();
+});
+
+// === CREDITS SCREEN ===
+function showCredits() {
+    const overlay = document.getElementById('credits-overlay');
+    const lines = [
+        { text: 'KAKKADKRASH', color: '#ff9900', size: '48px', weight: '900' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Starring', color: '#999', size: '18px' },
+        { text: '\u2605 Alicia Kakkad \u2605', color: '#ffd700', size: '32px', weight: 'bold' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Created with Claude Code', color: '#fff', size: '20px' },
+        { text: 'Built with Three.js', color: '#fff', size: '20px' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Game Design & Development', color: '#999', size: '16px' },
+        { text: 'AI-Assisted by Claude', color: '#fff', size: '20px' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Music', color: '#999', size: '16px' },
+        { text: 'Procedural Synth Engine', color: '#fff', size: '20px' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Special Thanks', color: '#999', size: '16px' },
+        { text: 'Wumpa Fruit Farmers Everywhere', color: '#fff', size: '20px' },
+        { text: 'The Chickens (for their service)', color: '#fff', size: '18px' },
+        { text: 'Santa Claus (for showing up)', color: '#fff', size: '18px' },
+        { text: '', color: 'transparent', size: '20px' },
+        { text: 'Thank you for playing!', color: '#ffd700', size: '24px', weight: 'bold' },
+    ];
+    let html = '<div id="credits-content">';
+    lines.forEach(l => {
+        const w = l.weight || 'normal';
+        if (l.text === '') {
+            html += '<div class="credits-line" style="height:30px;">&nbsp;</div>';
+        } else {
+            html += '<div class="credits-line" style="color:' + l.color + ';font-size:' + l.size + ';font-weight:' + w + ';">' + l.text + '</div>';
+        }
+    });
+    html += '</div>';
+    overlay.innerHTML = html;
+    overlay.style.display = 'block';
+}
+function hideCredits() {
+    const overlay = document.getElementById('credits-overlay');
+    overlay.style.display = 'none';
+    overlay.innerHTML = '';
+}
+document.getElementById('credits-overlay').addEventListener('click', (e) => {
+    e.stopPropagation();
+    hideCredits();
+});
+document.getElementById('pause-credits-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    showCredits();
+});
+
+// === SHARE SCORE VIA URL ===
+function shareScore() {
+    try {
+        const time = ((performance.now() - state.startTime) / 1000).toFixed(1);
+        const stars = getStarRating(state.level, parseFloat(time));
+        const data = JSON.stringify({ level: state.level + 1, time: parseFloat(time), stars: stars });
+        const encoded = btoa(data);
+        const url = window.location.origin + window.location.pathname + '#score=' + encoded;
+        navigator.clipboard.writeText(url).then(() => {
+            const toast = document.getElementById('share-toast');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
+        }).catch(() => {
+            // Fallback: create a temporary input
+            const tmp = document.createElement('textarea');
+            tmp.value = url;
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            document.body.removeChild(tmp);
+            const toast = document.getElementById('share-toast');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
+        });
+    } catch(e) {}
+}
+
+// Check for shared score on page load
+function checkSharedScore() {
+    try {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#score=')) {
+            const encoded = hash.substring(7);
+            const data = JSON.parse(atob(encoded));
+            if (data && data.level && data.time !== undefined && data.stars !== undefined) {
+                const banner = document.getElementById('friend-score-banner');
+                const starStr = '\u2605'.repeat(data.stars) + '\u2606'.repeat(3 - data.stars);
+                banner.textContent = 'A friend scored ' + data.time + 's on Level ' + data.level + ' with ' + starStr + '!';
+                banner.style.display = 'block';
+            }
+        }
+    } catch(e) {}
+}
+checkSharedScore();
+
 // === RENDER LOOP (delta-time) ===
 function animate() {
     requestAnimationFrame(animate);
     const now = performance.now();
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
-    if (!state.paused) {
-        update(dt);
+    if (photoMode) {
+        updatePhotoModeCamera(dt);
+        // Still render fireworks/particles visually (no game logic)
+        updateFPSCounter();
+        renderer.render(scene, camera);
+        return;
     }
+    if (!state.paused) {
+        if (isTouchDevice) { applyMobileJoystick(); }
+        update(dt);
+        if (isTouchDevice) { clearMobileKeys(); updateMobileInteractButton(); }
+        updateTutorial(dt);
+    }
+    updateFPSCounter();
     renderer.render(scene, camera);
 }
+setupMobileControls();
 animate();
 </script>
 </body>
