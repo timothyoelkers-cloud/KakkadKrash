@@ -139,6 +139,36 @@
             80% { opacity: 1; }
             100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
         }
+        /* Goal reached banner */
+        #goal-banner {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 150; display: none; text-align: center;
+            background: rgba(0,0,0,0.85); border: 3px solid #ffd700;
+            border-radius: 16px; padding: 24px 40px;
+            pointer-events: auto;
+        }
+        #goal-banner h2 {
+            font-size: 36px; color: #ffd700; margin-bottom: 8px;
+            text-shadow: 2px 2px 0 #000;
+        }
+        #goal-banner p {
+            color: #ccc; font-size: 16px; margin-bottom: 18px;
+        }
+        #goal-banner .goal-btns { display: flex; gap: 12px; justify-content: center; }
+        #goal-banner button {
+            padding: 12px 28px; font-size: 16px; font-weight: bold;
+            border-radius: 10px; cursor: pointer; border: 2px solid #fff;
+            color: #fff; text-shadow: 1px 1px 2px #000;
+        }
+        #goal-btn-explore {
+            background: linear-gradient(180deg, #28a745, #1e7e34);
+        }
+        #goal-btn-finish {
+            background: linear-gradient(180deg, #f90, #c60);
+        }
+        #goal-banner button:hover { transform: scale(1.05); }
+        .golden-remaining { color: #ffd700; font-size: 14px; margin-top: 10px; }
+
         /* Password gate */
         #password-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -511,6 +541,16 @@
     </div>
 </div>
 
+<div id="goal-banner">
+    <h2>GOAL REACHED!</h2>
+    <p>You collected all the Wumpa Fruit!</p>
+    <div class="golden-remaining" id="golden-remaining"></div>
+    <div class="goal-btns">
+        <button id="goal-btn-explore">Keep Exploring</button>
+        <button id="goal-btn-finish">Finish Level</button>
+    </div>
+</div>
+
 <div id="win-overlay">
     <h1>ISLAND COMPLETE!</h1>
     <div id="win-new-best">NEW BEST!</div>
@@ -701,6 +741,7 @@ const state = {
     invincible: 0,
     totalTime: 0,
     screenShake: 0,
+    goalReached: false,
     paused: false,
     dying: false,
     deathTimer: 0,
@@ -1795,7 +1836,7 @@ function updateSanta(t60) {
         unlockAchievement('santasHelper');
         scene.remove(santaNPC.group);
         santaNPC = null;
-        if (state.collected >= LEVELS[state.level].fruits) winLevel();
+        if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
     }
 }
 
@@ -2519,7 +2560,7 @@ function updateUFO(t60) {
             updateHUD();
             unlockAchievement('ufoBeliever');
             state.ufoBeamTimer = -600; // prevent re-triggering for 10 seconds
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     } else {
         if (state.ufoBeamTimer > 0) state.ufoBeamTimer = 0;
@@ -2907,7 +2948,7 @@ function updateGlassDome(t60, animTime) {
             spawnParticles(w.position, 0xff6600, 8);
             triggerFruitPop();
             updateHUD();
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     }
 }
@@ -3620,6 +3661,7 @@ function resetPlayerState() {
     state.health = 3;
     state.invincible = 0;
     state.won = false;
+    state.goalReached = false;
     state.screenShake = 0;
     state.dying = false;
     state.deathTimer = 0;
@@ -3648,6 +3690,7 @@ function startLevel(levelIdx) {
     document.getElementById('win-overlay').style.display = 'none';
     document.getElementById('level-overlay').style.display = 'none';
     document.getElementById('pause-overlay').style.display = 'none';
+    document.getElementById('goal-banner').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     document.getElementById('minimap').style.display = 'block';
     document.getElementById('compass').style.display = 'block';
@@ -3690,6 +3733,40 @@ function startLevel(levelIdx) {
         requestAnimationFrame(() => el.classList.add('show'));
     }
 }
+
+function checkGoalReached() {
+    if (state.goalReached) return;
+    state.goalReached = true;
+
+    // Count remaining golden wumpa on this level
+    let goldenLeft = 0;
+    goldenWumpas.forEach(g => { if (!g.userData.collected) goldenLeft++; });
+
+    const banner = document.getElementById('goal-banner');
+    const goldenMsg = document.getElementById('golden-remaining');
+
+    if (goldenLeft > 0) {
+        goldenMsg.textContent = goldenLeft + ' Golden Wumpa remaining on this island! Explore to find them.';
+        goldenMsg.style.display = 'block';
+        banner.style.display = 'block';
+    } else {
+        // All golden collected too - auto finish after brief banner
+        goldenMsg.textContent = 'All Golden Wumpa collected!';
+        goldenMsg.style.display = 'block';
+        banner.style.display = 'block';
+    }
+}
+
+document.getElementById('goal-btn-explore').addEventListener('click', () => {
+    document.getElementById('goal-banner').style.display = 'none';
+    // Player keeps playing - re-lock pointer
+    if (!isTouchDevice) renderer.domElement.requestPointerLock();
+});
+
+document.getElementById('goal-btn-finish').addEventListener('click', () => {
+    document.getElementById('goal-banner').style.display = 'none';
+    winLevel();
+});
 
 function winLevel() {
     state.won = true;
@@ -4414,7 +4491,7 @@ function update(dt) {
                     triggerFruitPop();
                     updateHUD();
                     { const cnt = incrementCounter('kk_cratesSmashed'); if (cnt >= 10) unlockAchievement('crateSmasher'); }
-                    if (state.collected >= LEVELS[state.level].fruits) winLevel();
+                    if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
                 }
             }
         }
@@ -4519,7 +4596,7 @@ function update(dt) {
             triggerFruitPop();
             updateHUD();
             unlockAchievement('firstFruit');
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     }
 
@@ -4540,7 +4617,7 @@ function update(dt) {
                 try { localStorage.setItem('kk_goldenL' + state.level, '1'); } catch(e) {}
                 if (checkAllGoldenComplete()) markGoldenComplete();
             }
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     }
 
@@ -4555,7 +4632,7 @@ function update(dt) {
             spawnParticles(rw.position, 0xffd700, 20, 0.5);
             triggerFruitPop();
             updateHUD();
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     }
 
@@ -4571,7 +4648,7 @@ function update(dt) {
             state.collected = Math.min(state.collected + 5, LEVELS[state.level].fruits);
             triggerFruitPop();
             updateHUD();
-            if (state.collected >= LEVELS[state.level].fruits) winLevel();
+            if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
         }
     }
 
@@ -4607,7 +4684,7 @@ function update(dt) {
                 triggerFruitPop();
                 updateHUD();
                 { const cnt = incrementCounter('kk_cratesSmashed'); if (cnt >= 10) unlockAchievement('crateSmasher'); }
-                if (state.collected >= LEVELS[state.level].fruits) winLevel();
+                if (state.collected >= LEVELS[state.level].fruits && !state.goalReached) checkGoalReached();
             } else if (d < 0.9) {
                 _pushDir.copy(state.pos).sub(c.position).normalize();
                 state.vel.x = _pushDir.x * 0.1;
